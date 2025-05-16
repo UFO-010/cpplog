@@ -26,6 +26,14 @@ Or with `<<` operator
 sError << "error" << "\n"
 ```
 
+To print log messages to file set
+
+```c++
+Log::Logger::setLogFile("log_file.txt");
+```
+
+Library use mutex when writing to file operation is performed, that can cause worse perfomans in multithread applications.
+
 ### Using colors
 Library provides colorozed log outputs to the console using ANSI escape colors. Colors are automatically applied if set
 ```c++
@@ -47,7 +55,7 @@ Logs are customizable via format string. Options:
 - **%{function}** - Function name from which the log was called
 - **%{line}** - Line number in the file from which the log was called
 - **%{pid}** - Current process name, Linux and Windows only
-- **%{%{message}}** - Log message
+- **%{message}** - Log message
 
 Always put separators between components, or else component will be treated as message. You can also place messages between components, they will be printed as well.
 For example
@@ -58,6 +66,7 @@ Log::Logger::setMessagePattern(
 Error("message\n");
 ```
 Will print
+
 `ERROR	 16.05.2025 11:36:37 logger_example file {your path}/example/main.cpp function void func() line 31 message`
 
 
