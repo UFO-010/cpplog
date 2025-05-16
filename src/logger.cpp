@@ -45,9 +45,9 @@ const char *Logger::msg_colors[] = {FATAL_COLOR, ERROR_COLOR, WARNING_COLOR, INF
 
 std::vector<const std::string *> Logger::tokens_pos = {&tok_type, &tok_message};
 std::vector<std::string> Logger::tokens_messages = {"\t", ""};
-std::string Logger::current_process;
-std::mutex Logger::mtx;
-std::ofstream Logger::ofs;
+std::string Logger::current_process = "";
+std::mutex Logger::mtx = std::mutex();
+std::ofstream Logger::ofs = std::ofstream();
 
 void (*Logger::user_handler)(const messageType &msgType, const std::string &message) = nullptr;
 
@@ -165,15 +165,22 @@ void Logger::fatal(const std::string &file,
  * Writes log message to specified in @brief Logger::setLogFile file
  * Function don't write colors stored in message to file
  */
-void Logger::printMessage(const messageType &msgType, std::string msg) {
+void Logger::printMessage(const messageType &msgType, const std::string &msg) {
     if (ofs.is_open()) {
         std::lock_guard<std::mutex> lock(mtx);
-        ofs.write(msg.data() + sizeof(RESET_COLOR), msg.size() - sizeof(RESET_COLOR));
+        ofs.write(msg.data(), msg.size());
     }
+
     if (ansi_cols_support && colors_enabled) {
-        memmove(msg.data(), msg_colors[msgType], sizeof(RESET_COLOR));
-        msg.append(RESET_COLOR);
+        std::string colorized_msg;
+        colorized_msg.reserve((sizeof(RESET_COLOR) * 2) + msg.size());
+        colorized_msg.append(msg_colors[msgType]);
+        colorized_msg.append(msg);
+        colorized_msg.append(RESET_COLOR);
+        std::cout << colorized_msg;
+        return;
     }
+
     std::cout << msg;
 }
 
@@ -197,10 +204,6 @@ inline std::string Logger::createMessage(const messageType &msgType,
                                          const std::string &str) {
     std::string msg;
     msg.reserve(512);
-
-    if (ansi_cols_support && colors_enabled) {
-        msg.assign(sizeof(RESET_COLOR), ' ');
-    }
 
     for (size_t i = 0; i < tokens_pos.size(); i++) {
         if (tokens_pos[i] == &tok_date) {

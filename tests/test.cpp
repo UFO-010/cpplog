@@ -16,6 +16,7 @@ void test_log_callback(const Log::messageType &msgType, const std::string &messa
 }
 
 TEST(format_test, empty_test) {
+    Log::Logger::setMessagePattern("");
     Log::Logger::setMessageHandler(&test_log_callback);
     std::string s("");
     Debug("");
@@ -36,6 +37,7 @@ TEST(format_test, empty_message) {
     Debug("");
     std::string s("");
     EXPECT_EQ(s, out);
+    Log::Logger::setMessagePattern("");
 }
 
 TEST(format_test, error_test) {
@@ -44,6 +46,7 @@ TEST(format_test, error_test) {
     Debug("");
     std::string s("");
     EXPECT_EQ(s, out);
+    Log::Logger::setMessagePattern("");
 }
 
 TEST(format_test, type_test) {
@@ -57,6 +60,7 @@ TEST(format_test, type_test) {
     Debug("");
     s = "type DEBUG";
     EXPECT_EQ(s, out);
+    Log::Logger::setMessagePattern("");
 }
 
 TEST(format_test, file_test) {
@@ -65,6 +69,7 @@ TEST(format_test, file_test) {
     Log::Logger::setMessagePattern("%{file}");
     Debug("");
     EXPECT_EQ(file, out);
+    Log::Logger::setMessagePattern("");
 }
 
 TEST(format_test, func_test) {
@@ -79,6 +84,7 @@ TEST(format_test, func_test) {
     Log::Logger::setMessagePattern("%{function}");
     Debug("");
     EXPECT_EQ(func, out);
+    Log::Logger::setMessagePattern("");
 }
 
 TEST(format_test, line_test) {
@@ -87,6 +93,7 @@ TEST(format_test, line_test) {
     std::string line = std::to_string(__LINE__ + 1);  // must be on the next line
     Debug("");
     EXPECT_EQ(line, out);
+    Log::Logger::setMessagePattern("");
 }
 
 TEST(format_test, date_test) {
@@ -101,6 +108,7 @@ TEST(format_test, date_test) {
     Log::Logger::setMessagePattern("%{date}");
     Debug("");
     EXPECT_EQ(std::string(date), out);
+    Log::Logger::setMessagePattern("");
 }
 
 TEST(format_test, time_test) {
@@ -121,6 +129,7 @@ TEST(format_test, time_test) {
 
     Debug("aaa");
     EXPECT_EQ(time, out);
+    Log::Logger::setMessagePattern("");
 }
 
 TEST(format_test, thread_test) {
@@ -141,6 +150,7 @@ TEST(format_test, thread_test) {
 
     Debug("aaa");
     EXPECT_EQ(thread, out);
+    Log::Logger::setMessagePattern("");
 }
 
 TEST(format_test, pid_test) {
@@ -161,4 +171,5 @@ TEST(format_test, pid_test) {
 
     Debug("aaa");
     EXPECT_EQ(pid, out);
+    Log::Logger::setMessagePattern("");
 }

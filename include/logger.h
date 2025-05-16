@@ -119,7 +119,7 @@ public:
                                      const int line,
                                      const std::string &str = nullptr);
 
-    static void printMessage(const messageType &msgType, std::string msg);
+    static void printMessage(const messageType &msgType, const std::string &msg);
 
     static std::string getCurrentProcess();
 
@@ -250,6 +250,7 @@ inline void Logger::setMessagePattern(const std::string &str) {
             }
             maybe_tok_start = false;
             i++;
+            maybe_token = "";
         }
 
         if (!maybe_tok_start && i < str.size()) {
