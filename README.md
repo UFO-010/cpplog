@@ -6,13 +6,13 @@ Simple logging library in C++. Support different logging levels and message form
 Usage
 -----
 
-Logging library provides several varinats and levels of writing logs.
+Logging library provides several varinats and levels of writing logs. Default log level is `DEBUG`
 
-- 'DEBUG'
-- 'INFO'
-- 'WARN'
-- 'ERROR'
-- 'FATAL'
+- `DEBUG`
+- `INFO`
+- `WARN`
+- `ERROR`
+- `FATAL`
 
 Logging can be used in printf-style like
 
@@ -20,18 +20,27 @@ Logging can be used in printf-style like
 Error("error\n");
 ```
 
-Or with '<<' operator
+Or with `<<` operator
 
 ```c++
 sError << "error" << "\n"
 ```
+
+### Using colors
+Library provides colorozed log outputs to the console using ANSI escape colors. Colors are automatically applied if set
+```c++
+Log::Logger::colorize(true);
+```
+
+To prevent data races library use stack message allocation and cout synchronization. Library use mutex only when writing to file operation is performed.
+
 
 Formatting
 ----------
 
 Logs are customizable via format string. Options:
 - **%{date}** - Current date
-- **%{time}** - Time logging when logging was called
+- **%{time}** - Time when logging was called
 - **%{type}** - Log level (DEBUG, INFO, WARN, ERROR, FATAL)
 - **%{file}** - File name from which the log was called
 - **%{thread}** - Thread identifier that wrote the log.
@@ -49,7 +58,7 @@ Log::Logger::setMessagePattern(
 Error("message\n");
 ```
 Will print
-'ERROR	 16.05.2025 11:36:37 logger_example file {your path}/example/main.cpp function void func() line 31 message'
+`ERROR	 16.05.2025 11:36:37 logger_example file {your path}/example/main.cpp function void func() line 31 message`
 
 
 
