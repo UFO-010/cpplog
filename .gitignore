@@ -30,3 +30,14 @@
 *.exe
 *.out
 *.app
+
+# Ignore all build directories
+build*/
+cmake-build-*/
+**/.vs
+**/out
+
+# Ignore all user-specific files
+*.user
+
+
