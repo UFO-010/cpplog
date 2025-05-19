@@ -1,8 +1,6 @@
 #include "gtest/gtest.h"
 #include "logger.h"
 
-#include <chrono>
-
 TEST(namespace_test, namespace) {
     using namespace Log;
     ASSERT_TRUE(true);
@@ -156,9 +154,9 @@ TEST(format_test, thread_test) {
 TEST(format_test, pid_test) {
     std::string pid;
 #if defined(__linux__)
-    pid.append(std::to_string(getpid()));
+    pid.append("format_test");
 #elif defined(_WIN32)
-    pid.append(std::to_string(GetCurrentProcessId()));
+    pid.append("format_test.exe");
 #endif
 
     Log::Logger::setMessageHandler(&test_log_callback);

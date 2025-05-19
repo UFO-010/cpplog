@@ -34,19 +34,24 @@ get_target_property(LOGGER_DIRECTORY logger SOURCE_DIR)
 
 add_executable(format_test ${SOURCES})
 
-include(GoogleTest)
-include(FetchContent)
 
-# FetchContent_Declare(
-#   googletest
-#   # Specify the commit you depend on and update it regularly.
-#   URL https://github.com/google/googletest/archive/5376968f6948923e2411081fd9372e71a59d8e77.zip
-# )
-# # For Windows: Prevent overriding the parent project's compiler/linker settings
-# set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-# FetchContent_MakeAvailable(googletest)
+if(WIN32)
+	include(FetchContent)
 
-find_package(GTest REQUIRED)
+	FetchContent_Declare(
+		googletest
+	   # Specify the commit you depend on and update it regularly.
+	   URL https://github.com/google/googletest/archive/5376968f6948923e2411081fd9372e71a59d8e77.zip
+    )
+     # For Windows: Prevent overriding the parent project's compiler/linker settings
+	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+	FetchContent_MakeAvailable(googletest)
+endif()
+
+if(UNIX)
+    include(GoogleTest)
+    find_package(GTest REQUIRED)
+endif()
 
 target_link_libraries(format_test PRIVATE
     logger
@@ -54,10 +59,12 @@ target_link_libraries(format_test PRIVATE
     GTest::gtest_main
 )
 
-gtest_discover_tests(format_test
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    DISCOVERY_TIMEOUT 30
-)
+if(UNIX)
+    gtest_discover_tests(format_test
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        DISCOVERY_TIMEOUT 30
+    )
+endif()
 
 add_test(NAME Test COMMAND format_test)
 
