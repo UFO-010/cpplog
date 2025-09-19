@@ -1,10 +1,8 @@
 
-#include <stdio.h>
-
 #include <thread>
 
 #include "logger.h"
-#include "console_sync.h"
+#include "console_sink.h"
 
 void thread_func1() {
     for (int i = 0; i < 1000; i++) {
@@ -35,8 +33,7 @@ void thread_func2() {
 
 int main() {
     Log::Logger::setLogLevel(4);
-    Log::Logger::setLogFile("log_file.txt");  // set log file
-    auto console = ConsoleSync();
+    auto console = ConsoleSink();
     console.colorize(true);
     Log::Logger::addSink(&console);
     //  set message pattern

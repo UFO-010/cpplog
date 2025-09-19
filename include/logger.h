@@ -2,10 +2,7 @@
 #define LOGGER_H
 
 #include <string.h>
-
-#include <fstream>
 #include <iostream>
-#include <mutex>
 #include <sstream>
 #include <vector>
 
@@ -87,11 +84,9 @@ public:
     static void setLogLevel(int level);
     static int getLevel();
 
-    static void setLogFile(const char *file);
-
     static void setMessagePattern(const std::string &str);
 
-    static void setMessageHandler(void (*handler)(const messageType &msgType,
+    static void setUserHandler(void (*handler)(const messageType &msgType,
                                                   const std::string &message));
 
     static void debug(const std::string &file,
@@ -131,16 +126,8 @@ private:
     Logger();
     ~Logger();
 
-    Logger(Logger const &) = delete;
-    Logger(const Logger &&) = delete;
-    Logger &operator=(Logger const &) = delete;
-
     static std::string getCurrentProcess();
 
-#if defined(_WIN32)
-    static HANDLE getWinConsoleHandle(const std::streambuf *osbuf);
-    static bool setWinConsoleAnsiCols(const std::streambuf *osbuf);
-#endif
     static int log_level;
     static std::vector<ILogSink *> sinks;
 
@@ -149,9 +136,6 @@ private:
     static std::vector<const std::string *> tokens_pos;
     /// holds messages that placed after tokens passed in  @brief setMessagePatter
     static std::vector<std::string> tokens_messages;
-
-    static std::ofstream ofs;
-    static std::mutex mtx;
 
     static void (*user_handler)(const messageType &msgType, const std::string &message);
 
@@ -168,11 +152,9 @@ private:
 
     /// types of logging level, added to output message
     static const char *msg_log_types[];
-    /// terminal colors for logging message
-    static const char *msg_colors[];
 };
 
-inline void Logger::setMessageHandler(void (*_handler)(const messageType &msgType,
+inline void Logger::setUserHandler(void (*_handler)(const messageType &msgType,
                                                        const std::string &message)) {
     user_handler = _handler;
 }
@@ -380,7 +362,7 @@ public:
         return *this;
     }
 
-protected:
+private:
     std::stringstream st;
     int message_type;
     const char *file;

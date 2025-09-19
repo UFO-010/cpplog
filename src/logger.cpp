@@ -1,8 +1,8 @@
 
 #include "logger.h"
 
+#include <fstream>
 #include <ctime>
-#include <iostream>
 
 #if defined __linux__
     #include <sys/syscall.h>
@@ -14,14 +14,6 @@
     #include <psapi.h>
     #define localtime_r(T, Tm) (localtime_s(Tm, T) ? NULL : Tm)
 #endif
-
-// ANSI terminal colors
-#define DEBUG_COLOR "\033[97m"    // white
-#define INFO_COLOR "\033[32m"     // green
-#define WARNING_COLOR "\033[33m"  // yellow
-#define ERROR_COLOR "\033[31m"    // red
-#define FATAL_COLOR "\033[35m"    // magenta
-#define RESET_COLOR "\033[0m"     // reset
 
 namespace Log {
 int Logger::log_level = 4;
@@ -40,31 +32,15 @@ const std::string Logger::tok_message = "%{message}";
 
 const char *Logger::msg_log_types[] = {"FATAL", "ERROR", "WARN", "INFO", "DEBUG"};
 
-const char *Logger::msg_colors[] = {FATAL_COLOR, ERROR_COLOR, WARNING_COLOR, INFO_COLOR,
-                                    DEBUG_COLOR};
-
 std::vector<const std::string *> Logger::tokens_pos = {&tok_type, &tok_message};
 std::vector<std::string> Logger::tokens_messages = {"\t", ""};
 std::string Logger::current_process = "";
-std::mutex Logger::mtx = std::mutex();
-std::ofstream Logger::ofs = std::ofstream();
 
 void (*Logger::user_handler)(const messageType &msgType, const std::string &message) = 0;
 
 Logger::Logger() {}
 
-Logger::~Logger() {
-    if (ofs.is_open()) {
-        ofs.flush();
-        ofs.close();
-    }
-}
-
-void Logger::setLogFile(const char *file) {
-    if (!ofs.is_open()) {
-        ofs.open(file, std::fstream::out);
-    }
-}
+Logger::~Logger() {}
 
 /**
  * @brief Logger::setLogLevel
@@ -91,6 +67,7 @@ void Logger::debug(const std::string &file,
     for (auto sink : sinks) {
         sink->send(DebugMsg, msg.c_str(), msg.size());
     }
+
     if (user_handler != nullptr) {
         user_handler(DebugMsg, msg);
     }
@@ -295,49 +272,6 @@ std::string Logger::getCurrentProcess() {
 
     std::string msg(std::to_string(pid));
     return msg;
-}
-
-/**
- * @brief Logger::getWinConsoleHandle
- * @param osbuf
- * @return Windows handler for stdout or stderr
- *
- *
- */
-inline HANDLE Logger::getWinConsoleHandle(const std::streambuf *osbuf) {
-    if (osbuf == std::cout.rdbuf()) {
-        static const HANDLE std_out_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-        return std_out_handle;
-    }
-
-    if (osbuf == std::cerr.rdbuf()) {
-        static const HANDLE std_err_handle = GetStdHandle(STD_ERROR_HANDLE);
-        return std_err_handle;
-    }
-    return INVALID_HANDLE_VALUE;
-}
-
-/**
- * @brief Logger::setWinConsoleAnsiCols
- * @param osbuf
- * @return true if ANSI colors enabled
- *
- *
- */
-bool Logger::setWinConsoleAnsiCols(const std::streambuf *osbuf) {
-    HANDLE win_handle = getWinConsoleHandle(osbuf);
-    if (win_handle == INVALID_HANDLE_VALUE) {
-        return false;
-    }
-    DWORD dw_mode = 0;
-    if (!GetConsoleMode(win_handle, &dw_mode)) {
-        return false;
-    }
-    dw_mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    if (!SetConsoleMode(win_handle, dw_mode)) {
-        return false;
-    }
-    return true;
 }
 
 #endif

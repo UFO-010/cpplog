@@ -6,7 +6,6 @@ Checks:
   bugprone-use-after-move,
   clang-*,
   cppcoreguidelines-*,
-  modernize-use-trailing-return-type,
   portability-*,
   readability-delete-null-pointer,
   readability-duplicate-include,
@@ -14,7 +13,3 @@ Checks:
   readability-redundant-*,
   readability-simplify-*,
   readability-static-*
-CheckOptions:
-  - key: modernize-use-trailing-return-type.TransformLambdas
-    value: none
-

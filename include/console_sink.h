@@ -12,9 +12,9 @@ enum class ansi_cols {
     RESET_COLOR = 5
 };
 
-class ConsoleSync : public Log::ILogSink {
+class ConsoleSink : public Log::ILogSink {
 public:
-    ConsoleSync() {}
+    ConsoleSink() {}
 
     void send(const Log::messageType &msgType, const char *data, size_t size) override {
         if (ansi_cols_support && colors_enabled) {
