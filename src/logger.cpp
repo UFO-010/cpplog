@@ -25,8 +25,8 @@
 
 namespace Log {
 int Logger::log_level = 4;
-bool Logger::ansi_cols_support = true;
-bool Logger::colors_enabled = false;
+
+std::vector<ILogSink *> Logger::sinks = {};
 
 const std::string Logger::tok_date = "%{date}";
 const std::string Logger::tok_time = "%{time}";
@@ -49,7 +49,7 @@ std::string Logger::current_process = "";
 std::mutex Logger::mtx = std::mutex();
 std::ofstream Logger::ofs = std::ofstream();
 
-void (*Logger::user_handler)(const messageType &msgType, const std::string &message) = nullptr;
+void (*Logger::user_handler)(const messageType &msgType, const std::string &message) = 0;
 
 Logger::Logger() {}
 
@@ -87,8 +87,10 @@ void Logger::debug(const std::string &file,
     }
 
     std::string msg = createMessage(DebugMsg, file, func, line, str);
-    printMessage(DebugMsg, msg);
 
+    for (auto sink : sinks) {
+        sink->send(DebugMsg, msg.c_str(), msg.size());
+    }
     if (user_handler != nullptr) {
         user_handler(DebugMsg, msg);
     }
@@ -103,8 +105,10 @@ void Logger::info(const std::string &file,
     }
 
     std::string msg = createMessage(InfoMsg, file, func, line, str);
-    printMessage(InfoMsg, msg);
 
+    for (auto sink : sinks) {
+        sink->send(InfoMsg, msg.c_str(), msg.size());
+    }
     if (user_handler != nullptr) {
         user_handler(InfoMsg, msg);
     }
@@ -119,8 +123,10 @@ void Logger::warning(const std::string &file,
     }
 
     std::string msg = createMessage(WarningMsg, file, func, line, str);
-    printMessage(WarningMsg, msg);
 
+    for (auto sink : sinks) {
+        sink->send(WarningMsg, msg.c_str(), msg.size());
+    }
     if (user_handler != nullptr) {
         user_handler(WarningMsg, msg);
     }
@@ -135,8 +141,10 @@ void Logger::error(const std::string &file,
     }
 
     std::string msg = createMessage(ErrorMsg, file, func, line, str);
-    printMessage(ErrorMsg, msg);
 
+    for (auto sink : sinks) {
+        sink->send(ErrorMsg, msg.c_str(), msg.size());
+    }
     if (user_handler != nullptr) {
         user_handler(ErrorMsg, msg);
     }
@@ -151,37 +159,13 @@ void Logger::fatal(const std::string &file,
     }
 
     std::string msg = createMessage(FatalMsg, file, func, line, str);
-    printMessage(FatalMsg, msg);
+    for (auto sink : sinks) {
+        sink->send(FatalMsg, msg.c_str(), msg.size());
+    }
 
     if (user_handler != nullptr) {
         user_handler(FatalMsg, msg);
     }
-}
-
-/**
- * @brief Logger::printMessage
- * @param msg output log message created in @brief Logger::createMessage
- *
- * Writes log message to specified in @brief Logger::setLogFile file
- * Function don't write colors stored in message to file
- */
-void Logger::printMessage(const messageType &msgType, const std::string &msg) {
-    if (ofs.is_open()) {
-        std::lock_guard<std::mutex> lock(mtx);
-        ofs.write(msg.data(), msg.size());
-    }
-
-    if (ansi_cols_support && colors_enabled) {
-        std::string colorized_msg;
-        colorized_msg.reserve((sizeof(RESET_COLOR) * 2) + msg.size());
-        colorized_msg.append(msg_colors[msgType]);
-        colorized_msg.append(msg);
-        colorized_msg.append(RESET_COLOR);
-        std::cout << colorized_msg;
-        return;
-    }
-
-    std::cout << msg;
 }
 
 /**
@@ -266,10 +250,6 @@ inline std::string Logger::createMessage(const messageType &msgType,
 
 int Logger::getLevel() {
     return log_level;
-}
-
-void Logger::colorize(bool enable) {
-    colors_enabled = enable;
 }
 
 #if defined(__linux__)

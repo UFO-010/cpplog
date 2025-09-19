@@ -59,12 +59,19 @@
 #endif
 
 namespace Log {
+
 enum messageType {
     FatalMsg,
     ErrorMsg,
     WarningMsg,
     InfoMsg,
     DebugMsg,
+};
+
+class ILogSink {
+public:
+    virtual ~ILogSink() = default;
+    virtual void send(const messageType &msgType, const char *data, size_t size) = 0;
 };
 
 /**
@@ -79,7 +86,6 @@ class Logger {
 public:
     static void setLogLevel(int level);
     static int getLevel();
-    static void colorize(bool enable);
 
     static void setLogFile(const char *file);
 
@@ -119,9 +125,7 @@ public:
                                      const int line,
                                      const std::string &str = nullptr);
 
-    static void printMessage(const messageType &msgType, const std::string &msg);
-
-    static std::string getCurrentProcess();
+    static void addSink(ILogSink *sink) { sinks.push_back(sink); }
 
 private:
     Logger();
@@ -131,29 +135,28 @@ private:
     Logger(const Logger &&) = delete;
     Logger &operator=(Logger const &) = delete;
 
+    static std::string getCurrentProcess();
+
 #if defined(_WIN32)
     static HANDLE getWinConsoleHandle(const std::streambuf *osbuf);
     static bool setWinConsoleAnsiCols(const std::streambuf *osbuf);
 #endif
     static int log_level;
+    static std::vector<ILogSink *> sinks;
 
-    static bool ansi_cols_support;
-    static bool colors_enabled;
     static std::string current_process;
-
-    static std::vector<const std::string *>
-        tokens_pos;  /// holds pointers to tokens, so the output will look the
-                     /// same as @brief setMessagePattern
-    static std::vector<std::string>
-        tokens_messages;  /// holds messages that placed after tokens passed in
-                          /// @brief setMessagePattern
+    /// holds pointers to tokens, so the output will look the  same as @brief setMessagePattern
+    static std::vector<const std::string *> tokens_pos;
+    /// holds messages that placed after tokens passed in  @brief setMessagePatter
+    static std::vector<std::string> tokens_messages;
 
     static std::ofstream ofs;
     static std::mutex mtx;
 
     static void (*user_handler)(const messageType &msgType, const std::string &message);
 
-    static const std::string tok_date;  /// token for message pattern
+    /// token for message pattern
+    static const std::string tok_date;
     static const std::string tok_time;
     static const std::string tok_type;
     static const std::string tok_file;
@@ -163,8 +166,10 @@ private:
     static const std::string tok_pid;
     static const std::string tok_message;
 
-    static const char *msg_log_types[];  /// types of logging level, added to output message
-    static const char *msg_colors[];     /// terminal colors for logging message
+    /// types of logging level, added to output message
+    static const char *msg_log_types[];
+    /// terminal colors for logging message
+    static const char *msg_colors[];
 };
 
 inline void Logger::setMessageHandler(void (*_handler)(const messageType &msgType,
