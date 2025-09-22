@@ -2,6 +2,7 @@
 #define CONSOLESYNC_H
 
 #include "logger.h"
+#include <iostream>
 
 enum class ansi_cols {
     DEBUG_COLOR = 0,

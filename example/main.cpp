@@ -3,6 +3,7 @@
 
 #include "logger.h"
 #include "console_sink.h"
+#include "stream_logger.h"
 
 void thread_func1() {
     for (int i = 0; i < 1000; i++) {

@@ -1,9 +1,7 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <string.h>
-#include <iostream>
-#include <sstream>
+#include <string>
 #include <vector>
 
 #if defined(_WIN32)
@@ -18,12 +16,6 @@
     #define Error(message) Log::Logger::error(__FILE__, __PRETTY_FUNCTION__, __LINE__, message)
     #define Fatal(message) Log::Logger::fatal(__FILE__, __PRETTY_FUNCTION__, __LINE__, message)
 
-    #define sDebug() Log::MsgSender(Log::DebugMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sInfo() Log::MsgSender(Log::InfoMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sWarning() Log::MsgSender(Log::WarningMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sError() Log::MsgSender(Log::ErrorMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sFatal() Log::MsgSender(Log::FatalMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-
 #elif _MSC_VER && !__INTEL_COMPILER
 
     #define Debug(message) Log::Logger::debug(__FILE__, __FUNCSIG__, __LINE__, message)
@@ -31,12 +23,6 @@
     #define Warning(message) Log::Logger::warning(__FILE__, __FUNCSIG__, __LINE__, message)
     #define Error(message) Log::Logger::error(__FILE__, __FUNCSIG__, __LINE__, message)
     #define Fatal(message) Logger::fatal(__FILE__, __FUNCSIG__, __LINE__, message)
-
-    #define sDebug() Log::MsgSender(Log::messageType::Debug, __FILE__, __FUNCSIG__, __LINE__)
-    #define sInfo() Log::MsgSender(Log::messageType::Info, __FILE__, __FUNCSIG__, __LINE__)
-    #define sWarning() Log::MsgSender(Log::messageType::Warning, __FILE__, __FUNCSIG__, __LINE__)
-    #define sError() Log::MsgSender(Log::messageType::Error, __FILE__, __FUNCSIG__, __LINE__)
-    #define sFatal() Log::MsgSender(Log::messageType::Fatal, __FILE__, __FUNCSIG__, __LINE__)
 
 #elif
 
@@ -46,12 +32,6 @@
     #define Warning(message) Log::Logger::warning(__FILE__, __func__, __LINE__, message)
     #define Error(message) Log::Logger::error(__FILE__, __func__, __LINE__, message)
     #define Fatal(message) Log::Logger::fatal(__FILE__, __func__, __LINE__, message)
-
-    #define sDebug() Log::MsgSender(Log::messageType::Debug, __FILE__, __func__, __LINE__)
-    #define sInfo() Log::MsgSender(Log::messageType::Info, __FILE__, __func__, __LINE__)
-    #define sWarning() Log::MsgSender(Log::messageType::Warning, __FILE__, __func__, __LINE__)
-    #define sError() Log::MsgSender(Log::messageType::Error, __FILE__, __func__, __LINE__)
-    #define sFatal() Log::MsgSender(Log::messageType::Fatal, __FILE__, __func__, __LINE__)
 
 #endif
 
@@ -86,8 +66,10 @@ public:
 
     static void setMessagePattern(const std::string &str);
 
-    static void setUserHandler(void (*handler)(const messageType &msgType,
-                                                  const std::string &message));
+    inline static void setUserHandler(void (*_handler)(const messageType &msgType,
+                                                       const std::string &message)) {
+        user_handler = _handler;
+    }
 
     static void debug(const std::string &file,
                       const std::string &func,
@@ -153,11 +135,6 @@ private:
     /// types of logging level, added to output message
     static const char *msg_log_types[];
 };
-
-inline void Logger::setUserHandler(void (*_handler)(const messageType &msgType,
-                                                       const std::string &message)) {
-    user_handler = _handler;
-}
 
 /**
  * @brief Logger::setMessagePattern
@@ -246,129 +223,6 @@ inline void Logger::setMessagePattern(const std::string &str) {
     }
     //     tokens_messages.resize(found_toks);
 }
-
-/**
- * @brief The MsgSender class
- *
- * MsgSender is used to generate messages for @brief The Logger class.
- * Constructor will be called every time when logging with operator << is
- * started, destructor will be called at the last call of operator <<. In the
- * destructor all stored elements is sended to @brief Logger.
- *
- * Example:
- * MsgSender(messageType::Debug) << "a" << "\n";
- * |                                          |
- * constructor called     destructor called, passing elements to @brief
- * Logger "a\n" is passed to @brief log_debug(), wrapper of @brief Logger
- *
- * Stack allocations preffered to prevent data races
- *
- * Used through macros sDebug(), sInfo(), sWarning(), sCrirical(), sFatal()
- */
-class MsgSender {
-public:
-    MsgSender(const messageType &msgType)
-        : st(),
-          message_type(msgType),
-          file(),
-          function(),
-          line() {
-        st.str().reserve(128);
-    }
-
-    MsgSender(const messageType &msgType, const char *file_name, const char *func, int current_line)
-        : st(),
-          message_type(msgType),
-          file(file_name),
-          function(func),
-          line(current_line) {
-        st.str().reserve(128);
-    }
-
-    ~MsgSender() {
-        switch (message_type) {
-            case DebugMsg:
-                Logger::debug(file, function, line, st.str());
-                break;
-            case InfoMsg:
-                Logger::info(file, function, line, st.str());
-                break;
-            case WarningMsg:
-                Logger::warning(file, function, line, st.str());
-                break;
-            case ErrorMsg:
-                Logger::error(file, function, line, st.str());
-                break;
-            case FatalMsg:
-                Logger::fatal(file, function, line, st.str());
-                break;
-            default:
-                break;
-        }
-    }
-
-    MsgSender &operator<<(char str) {
-        st << str;
-        return *this;
-    }
-
-    MsgSender &operator<<(unsigned short str) {
-        st << str;
-        return *this;
-    }
-
-    MsgSender &operator<<(signed short str) {
-        st << str;
-        return *this;
-    }
-
-    MsgSender &operator<<(unsigned int str) {
-        st << str;
-        return *this;
-    }
-
-    MsgSender &operator<<(signed int str) {
-        st << str;
-        return *this;
-    }
-
-    MsgSender &operator<<(unsigned long str) {
-        st << str;
-        return *this;
-    }
-
-    MsgSender &operator<<(signed long str) {
-        st << str;
-        return *this;
-    }
-
-    MsgSender &operator<<(float str) {
-        st << str;
-        return *this;
-    }
-
-    MsgSender &operator<<(double str) {
-        st << str;
-        return *this;
-    }
-
-    MsgSender &operator<<(const char *str) {
-        st << str;
-        return *this;
-    }
-
-    MsgSender &operator<<(const std::string &str) {
-        st << str;
-        return *this;
-    }
-
-private:
-    std::stringstream st;
-    int message_type;
-    const char *file;
-    const char *function;
-    int line;
-};
 
 }  // namespace Log
 

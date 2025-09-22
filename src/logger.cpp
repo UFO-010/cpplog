@@ -1,8 +1,8 @@
 
 #include "logger.h"
 
-#include <fstream>
 #include <ctime>
+#include <fstream>
 
 #if defined __linux__
     #include <sys/syscall.h>
