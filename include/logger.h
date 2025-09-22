@@ -27,7 +27,6 @@
 
 #elif
 
-    // __func__ supported since c++11
     #define Debug(message) Log::Logger::debug(__FILE__, __func__, __LINE__, message)
     #define Info(message) Log::Logger::info(__FILE__, __func__, __LINE__, message)
     #define Warning(message) Log::Logger::warning(__FILE__, __func__, __LINE__, message)
@@ -50,6 +49,16 @@ class ILogSink {
 public:
     virtual ~ILogSink() = default;
     virtual void send(const messageType &msgType, const char *data, size_t size) = 0;
+};
+
+class DataProvider {
+public:
+    virtual ~DataProvider() = default;
+
+    virtual const char *getProcessName(char *buffer, size_t bufferSize) const = 0;
+    virtual const char *getThreadId(char *buffer, size_t bufferSize) const = 0;
+    virtual const char *getCurrentDate(char *buffer, size_t bufferSize) const = 0;
+    virtual const char *getCurrentTime(char *buffer, size_t bufferSize) const = 0;
 };
 
 /**
@@ -194,25 +203,11 @@ public:
         for (size_t i = 0; i < tokens_pos.size(); i++) {
             if (tokens_pos[i] == &tok_date) {
                 msg.append(tokens_messages[i]);
-
-                time_t timestamp;
-                time(&timestamp);
-                struct tm datetime;
-                datetime = *localtime_r(&timestamp, &datetime);
-                char out[16];  // unsafe
-                strftime(out, 16, "%d.%m.%Y", &datetime);
-                msg.append(out);
+                msg.append(data_provider->getCurrentDate(msg.data() + msg.size(), 16));
             }
             if (tokens_pos[i] == &tok_time) {
                 msg.append(tokens_messages[i]);
-
-                time_t timestamp;
-                time(&timestamp);
-                struct tm datetime;
-                datetime = *localtime_r(&timestamp, &datetime);
-                char out[16];  // unsafe
-                strftime(out, 16, "%H:%M:%S", &datetime);
-                msg.append(out);
+                msg.append(data_provider->getCurrentTime(msg.data() + msg.size(), 16));
             }
             if (tokens_pos[i] == &tok_type) {
                 msg.append(tokens_messages[i]);
@@ -224,11 +219,7 @@ public:
             }
             if (tokens_pos[i] == &tok_thread) {
                 msg.append(tokens_messages[i]);
-#if defined(__linux__)
-                msg.append(getCurrentThread());
-#elif defined(_WIN32)
-                msg.append(getCurrentThread());
-#endif
+                msg.append(data_provider->getThreadId(msg.data() + msg.size(), 16));
             }
             if (tokens_pos[i] == &tok_func) {
                 msg.append(tokens_messages[i]);
@@ -240,7 +231,7 @@ public:
             }
             if (tokens_pos[i] == &tok_pid) {
                 msg.append(tokens_messages[i]);
-                msg.append(current_process);
+                msg.append(data_provider->getProcessName(msg.data() + msg.size(), 64));
             }
             if (tokens_pos[i] == &tok_message) {
                 msg.append(tokens_messages[i]);
@@ -252,18 +243,17 @@ public:
 
     static void addSink(ILogSink *sink) { sinks.push_back(sink); }
 
+    static void setDataProvider(const DataProvider *provider) { data_provider = provider; }
+
 private:
     Logger() {}
 
     ~Logger() {}
 
-    static std::string getCurrentProcess();
-    static std::string getCurrentThread();
-
     static int log_level;
     static std::vector<ILogSink *> sinks;
+    static const DataProvider *data_provider;
 
-    static std::string current_process;
     /// holds pointers to tokens, so the output will look the  same as @brief setMessagePattern
     static std::vector<const std::string *> tokens_pos;
     /// holds messages that placed after tokens passed in  @brief setMessagePatter
@@ -301,12 +291,6 @@ private:
  * Output: "<current date>%{time}"
  */
 inline void Logger::setMessagePattern(const std::string &str) {
-#if defined(_WIN32)
-    if (!setWinConsoleAnsiCols(std::cout.rdbuf())) {
-        ansi_cols_support = false;
-    }
-#endif
-
     tokens_messages.clear();
     tokens_pos.clear();
     tokens_messages.resize(9);
@@ -356,7 +340,7 @@ inline void Logger::setMessagePattern(const std::string &str) {
                 ++found_toks;
             } else if (maybe_token == tok_pid) {
                 tokens_pos.push_back(&tok_pid);
-                current_process = getCurrentProcess();
+
                 ++found_toks;
             } else if (maybe_token == tok_message) {
                 tokens_pos.push_back(&tok_message);
