@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <ctime>
 
 #if defined(_WIN32)
     #include <windows.h>
@@ -61,8 +62,16 @@ public:
  */
 class Logger {
 public:
-    static void setLogLevel(int level);
-    static int getLevel();
+    /**
+     * @brief Logger::setLogLevel
+     * @param level priority of messages to display
+     *      * Set logging level. Messages with a lower priority level will be ignored,
+     * see
+     * @param messageType
+     */
+    inline static void setLogLevel(int level) { log_level = level; }
+
+    inline static int getLevel() { return log_level; }
 
     static void setMessagePattern(const std::string &str);
 
@@ -71,44 +80,185 @@ public:
         user_handler = _handler;
     }
 
-    static void debug(const std::string &file,
-                      const std::string &func,
-                      int line,
-                      const std::string &str = nullptr);
+    inline static void debug(const std::string &file,
+                             const std::string &func,
+                             int line,
+                             const std::string &str = nullptr) {
+        if (log_level < DebugMsg) {
+            return;
+        }
 
-    static void info(const std::string &file,
-                     const std::string &func,
-                     int line,
-                     const std::string &str = nullptr);
+        std::string msg = createMessage(DebugMsg, file, func, line, str);
 
-    static void warning(const std::string &file,
-                        const std::string &func,
-                        int line,
-                        const std::string &str = nullptr);
+        for (auto sink : sinks) {
+            sink->send(DebugMsg, msg.c_str(), msg.size());
+        }
 
-    static void error(const std::string &file,
-                      const std::string &func,
-                      int line,
-                      const std::string &str = nullptr);
+        if (user_handler != nullptr) {
+            user_handler(DebugMsg, msg);
+        }
+    }
 
-    static void fatal(const std::string &file,
-                      const std::string &func,
-                      int line,
-                      const std::string &str = nullptr);
+    inline static void info(const std::string &file,
+                            const std::string &func,
+                            int line,
+                            const std::string &str = nullptr) {
+        if (log_level < InfoMsg) {
+            return;
+        }
 
+        std::string msg = createMessage(InfoMsg, file, func, line, str);
+
+        for (auto sink : sinks) {
+            sink->send(InfoMsg, msg.c_str(), msg.size());
+        }
+        if (user_handler != nullptr) {
+            user_handler(InfoMsg, msg);
+        }
+    }
+
+    inline static void warning(const std::string &file,
+                               const std::string &func,
+                               int line,
+                               const std::string &str = nullptr) {
+        if (log_level < WarningMsg) {
+            return;
+        }
+
+        std::string msg = createMessage(WarningMsg, file, func, line, str);
+
+        for (auto sink : sinks) {
+            sink->send(WarningMsg, msg.c_str(), msg.size());
+        }
+        if (user_handler != nullptr) {
+            user_handler(WarningMsg, msg);
+        }
+    }
+
+    inline static void error(const std::string &file,
+                             const std::string &func,
+                             int line,
+                             const std::string &str = nullptr) {
+        if (log_level < ErrorMsg) {
+            return;
+        }
+
+        std::string msg = createMessage(ErrorMsg, file, func, line, str);
+
+        for (auto sink : sinks) {
+            sink->send(ErrorMsg, msg.c_str(), msg.size());
+        }
+        if (user_handler != nullptr) {
+            user_handler(ErrorMsg, msg);
+        }
+    }
+
+    inline static void fatal(const std::string &file,
+                             const std::string &func,
+                             int line,
+                             const std::string &str = nullptr) {
+        if (log_level < FatalMsg) {
+            return;
+        }
+
+        std::string msg = createMessage(FatalMsg, file, func, line, str);
+        for (auto sink : sinks) {
+            sink->send(FatalMsg, msg.c_str(), msg.size());
+        }
+
+        if (user_handler != nullptr) {
+            user_handler(FatalMsg, msg);
+        }
+    }
+
+    /**
+     * @brief Logger::createMessage
+     * @param msgType type of message, see @param messageType
+     * @param file name of file function called from
+     * @param func name of function this function called from
+     * @param line number of function this function called from
+     * @param str input string to print in log message
+     * @param msg poitner to output log message
+     *      * Creates log message with specified in @brief Logger::setMessagePattern
+     * view and print it to terminal. To prevent errors we write terminal
+     * colors directly to the message
+     */
     static std::string createMessage(const messageType &msgType,
                                      const std::string &file,
                                      const std::string &func,
                                      const int line,
-                                     const std::string &str = nullptr);
+                                     const std::string &str = nullptr) {
+        std::string msg;
+        msg.reserve(512);
+
+        for (size_t i = 0; i < tokens_pos.size(); i++) {
+            if (tokens_pos[i] == &tok_date) {
+                msg.append(tokens_messages[i]);
+
+                time_t timestamp;
+                time(&timestamp);
+                struct tm datetime;
+                datetime = *localtime_r(&timestamp, &datetime);
+                char out[16];  // unsafe
+                strftime(out, 16, "%d.%m.%Y", &datetime);
+                msg.append(out);
+            }
+            if (tokens_pos[i] == &tok_time) {
+                msg.append(tokens_messages[i]);
+
+                time_t timestamp;
+                time(&timestamp);
+                struct tm datetime;
+                datetime = *localtime_r(&timestamp, &datetime);
+                char out[16];  // unsafe
+                strftime(out, 16, "%H:%M:%S", &datetime);
+                msg.append(out);
+            }
+            if (tokens_pos[i] == &tok_type) {
+                msg.append(tokens_messages[i]);
+                msg.append(msg_log_types[msgType]);
+            }
+            if (tokens_pos[i] == &tok_file) {
+                msg.append(tokens_messages[i]);
+                msg.append(file);
+            }
+            if (tokens_pos[i] == &tok_thread) {
+                msg.append(tokens_messages[i]);
+#if defined(__linux__)
+                msg.append(getCurrentThread());
+#elif defined(_WIN32)
+                msg.append(getCurrentThread());
+#endif
+            }
+            if (tokens_pos[i] == &tok_func) {
+                msg.append(tokens_messages[i]);
+                msg.append(func);
+            }
+            if (tokens_pos[i] == &tok_line) {
+                msg.append(tokens_messages[i]);
+                msg.append(std::to_string(line));
+            }
+            if (tokens_pos[i] == &tok_pid) {
+                msg.append(tokens_messages[i]);
+                msg.append(current_process);
+            }
+            if (tokens_pos[i] == &tok_message) {
+                msg.append(tokens_messages[i]);
+                msg.append(str);
+            }
+        }
+        return msg;
+    }
 
     static void addSink(ILogSink *sink) { sinks.push_back(sink); }
 
 private:
-    Logger();
-    ~Logger();
+    Logger() {}
+
+    ~Logger() {}
 
     static std::string getCurrentProcess();
+    static std::string getCurrentThread();
 
     static int log_level;
     static std::vector<ILogSink *> sinks;
