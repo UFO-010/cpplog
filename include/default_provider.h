@@ -3,6 +3,8 @@
 
 #include "logger.h"
 #include <cstring>
+#include <ctime>
+
 #if defined(__linux__) || defined(__APPLE__)
     #include <sys/syscall.h>
     #include <unistd.h>
@@ -12,7 +14,7 @@
 #if defined(_WIN32)
     #include <processthreadsapi.h>
     #include <psapi.h>
-    // localtime_r не является стандартной в MSVC, используем localtime_s
+
     #define localtime_r(T, Tm) (localtime_s(Tm, T) ? nullptr : Tm)
 #endif
 

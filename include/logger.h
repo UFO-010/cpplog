@@ -3,11 +3,6 @@
 
 #include <string>
 #include <vector>
-#include <ctime>
-
-#if defined(_WIN32)
-    #include <windows.h>
-#endif
 
 #if defined(__GNUC__) || defined(__clang__)
 
@@ -47,14 +42,11 @@ enum messageType {
 
 class ILogSink {
 public:
-    virtual ~ILogSink() = default;
     virtual void send(const messageType &msgType, const char *data, size_t size) = 0;
 };
 
 class DataProvider {
 public:
-    virtual ~DataProvider() = default;
-
     virtual const char *getProcessName(char *buffer, size_t bufferSize) const = 0;
     virtual const char *getThreadId(char *buffer, size_t bufferSize) const = 0;
     virtual const char *getCurrentDate(char *buffer, size_t bufferSize) const = 0;
@@ -74,9 +66,7 @@ public:
     /**
      * @brief Logger::setLogLevel
      * @param level priority of messages to display
-     *      * Set logging level. Messages with a lower priority level will be ignored,
-     * see
-     * @param messageType
+     * Set logging level. Messages with a lower priority level will be ignored
      */
     inline static void setLogLevel(int level) { log_level = level; }
 
@@ -84,15 +74,15 @@ public:
 
     static void setMessagePattern(const std::string &str);
 
-    inline static void setUserHandler(void (*_handler)(const messageType &msgType,
-                                                       const std::string &message)) {
+    static void setUserHandler(void (*_handler)(const messageType &msgType,
+                                                const std::string &message)) {
         user_handler = _handler;
     }
 
-    inline static void debug(const std::string &file,
-                             const std::string &func,
-                             int line,
-                             const std::string &str = nullptr) {
+    static void debug(const std::string &file,
+                      const std::string &func,
+                      int line,
+                      const std::string &str = nullptr) {
         if (log_level < DebugMsg) {
             return;
         }
@@ -108,10 +98,10 @@ public:
         }
     }
 
-    inline static void info(const std::string &file,
-                            const std::string &func,
-                            int line,
-                            const std::string &str = nullptr) {
+    static void info(const std::string &file,
+                     const std::string &func,
+                     int line,
+                     const std::string &str = nullptr) {
         if (log_level < InfoMsg) {
             return;
         }
@@ -126,10 +116,10 @@ public:
         }
     }
 
-    inline static void warning(const std::string &file,
-                               const std::string &func,
-                               int line,
-                               const std::string &str = nullptr) {
+    static void warning(const std::string &file,
+                        const std::string &func,
+                        int line,
+                        const std::string &str = nullptr) {
         if (log_level < WarningMsg) {
             return;
         }
@@ -144,10 +134,10 @@ public:
         }
     }
 
-    inline static void error(const std::string &file,
-                             const std::string &func,
-                             int line,
-                             const std::string &str = nullptr) {
+    static void error(const std::string &file,
+                      const std::string &func,
+                      int line,
+                      const std::string &str = nullptr) {
         if (log_level < ErrorMsg) {
             return;
         }
@@ -162,10 +152,10 @@ public:
         }
     }
 
-    inline static void fatal(const std::string &file,
-                             const std::string &func,
-                             int line,
-                             const std::string &str = nullptr) {
+    static void fatal(const std::string &file,
+                      const std::string &func,
+                      int line,
+                      const std::string &str = nullptr) {
         if (log_level < FatalMsg) {
             return;
         }
@@ -248,8 +238,6 @@ public:
 private:
     Logger() {}
 
-    ~Logger() {}
-
     static int log_level;
     static std::vector<ILogSink *> sinks;
     static const DataProvider *data_provider;
@@ -285,9 +273,9 @@ private:
  * Options : "%{date}"; "%{time}"; "%{type}"; "%{file}"; "%{thread}";
  * "%{function}"; "%{line}"; "%{pid}"; "%{message}".
  * Always put separators between options
- * Example: "%{date} %{time}"
+ * @example "%{date} %{time}"
  * Output: "<current date> <current time>"
- * Example: "%{date}%{time}"
+ * @example "%{date}%{time}"
  * Output: "<current date>%{time}"
  */
 inline void Logger::setMessagePattern(const std::string &str) {
@@ -355,7 +343,6 @@ inline void Logger::setMessagePattern(const std::string &str) {
             tokens_messages[found_toks].push_back(str[i]);
         }
     }
-    //     tokens_messages.resize(found_toks);
 }
 
 }  // namespace Log
