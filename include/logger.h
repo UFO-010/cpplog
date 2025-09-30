@@ -3,8 +3,10 @@
 
 #include <string>
 #include <vector>
+#include <cstring>
 
 constexpr int LOGGER_MAX_SINKS = 4;
+constexpr size_t LOGGER_MAX_STR_SIZE = 512;
 
 #if defined(__GNUC__) || defined(__clang__)
 
@@ -87,10 +89,11 @@ public:
             return;
         }
 
-        std::string msg = createMessage(DebugMsg, file, func, line, str);
+        static char msg[LOGGER_MAX_STR_SIZE];
+        size_t msg_size = createMessage(DebugMsg, file, func, line, str, msg, sizeof(msg));
 
         for (int i = 0; i < sink_count; i++) {
-            sinks[i]->send(DebugMsg, msg.c_str(), msg.size());
+            sinks[i]->send(DebugMsg, msg, msg_size);
         }
 
         if (user_handler != nullptr) {
@@ -103,10 +106,11 @@ public:
             return;
         }
 
-        std::string msg = createMessage(InfoMsg, file, func, line, str);
+        static char msg[LOGGER_MAX_STR_SIZE];
+        size_t msg_size = createMessage(InfoMsg, file, func, line, str, msg, sizeof(msg));
 
         for (int i = 0; i < sink_count; i++) {
-            sinks[i]->send(InfoMsg, msg.c_str(), msg.size());
+            sinks[i]->send(InfoMsg, msg, msg_size);
         }
 
         if (user_handler != nullptr) {
@@ -119,10 +123,11 @@ public:
             return;
         }
 
-        std::string msg = createMessage(WarningMsg, file, func, line, str);
+        static char msg[LOGGER_MAX_STR_SIZE];
+        size_t msg_size = createMessage(WarningMsg, file, func, line, str, msg, sizeof(msg));
 
         for (int i = 0; i < sink_count; i++) {
-            sinks[i]->send(WarningMsg, msg.c_str(), msg.size());
+            sinks[i]->send(WarningMsg, msg, msg_size);
         }
 
         if (user_handler != nullptr) {
@@ -135,10 +140,11 @@ public:
             return;
         }
 
-        std::string msg = createMessage(ErrorMsg, file, func, line, str);
+        static char msg[LOGGER_MAX_STR_SIZE];
+        size_t msg_size = createMessage(ErrorMsg, file, func, line, str, msg, sizeof(msg));
 
         for (int i = 0; i < sink_count; i++) {
-            sinks[i]->send(ErrorMsg, msg.c_str(), msg.size());
+            sinks[i]->send(ErrorMsg, msg, msg_size);
         }
         if (user_handler != nullptr) {
             user_handler(ErrorMsg, msg);
@@ -150,10 +156,11 @@ public:
             return;
         }
 
-        std::string msg = createMessage(FatalMsg, file, func, line, str);
+        static char msg[LOGGER_MAX_STR_SIZE];
+        size_t msg_size = createMessage(FatalMsg, file, func, line, str, msg, sizeof(msg));
 
         for (int i = 0; i < sink_count; i++) {
-            sinks[i]->send(FatalMsg, msg.c_str(), msg.size());
+            sinks[i]->send(FatalMsg, msg, msg_size);
         }
 
         if (user_handler != nullptr) {
@@ -168,58 +175,88 @@ public:
      * @param func name of function this function called from
      * @param line number of function this function called from
      * @param str input string to print in log message
-     * @param msg poitner to output log message
-     *      * Creates log message with specified in @brief Logger::setMessagePattern
-     * view and print it to terminal. To prevent errors we write terminal
-     * colors directly to the message
+     * @param outBuf poitner to output buffer
+     * @param bufSize max size of buffer
+     * Creates log message with specified in @brief Logger::setMessagePattern
+     * view and put it into `outBuf` and control it's size with `bufSize`.
      */
-    static std::string createMessage(const messageType &msgType,
-                                     const char *file,
-                                     const char *func,
-                                     const int line,
-                                     const char *str = nullptr) {
-        std::string msg;
-        msg.reserve(512);
+    static size_t createMessage(const messageType &msgType,
+                                const char *file,
+                                const char *func,
+                                const int line,
+                                const char *str,
+                                char *outBuf,
+                                size_t bufSize) {
+        size_t pos = 0;
 
+        auto append = [&](const char *data, size_t len) {
+            size_t cnt = 0;
+
+            if (pos + len < bufSize) {
+                cnt = len;
+            } else if (bufSize > pos) {
+                cnt = bufSize - pos - 1;
+            } else {
+                cnt = 0;
+            }
+            if (cnt != 0) {
+                std::memcpy(outBuf + pos, data, cnt);
+                pos += cnt;
+            }
+        };
+
+        auto appendC = [&](const char *s) { append(s, std::strlen(s)); };
+
+        auto appendInt = [&](int v) {
+            char numbuf[12];
+            int n = std::snprintf(numbuf, sizeof(numbuf), "%d", v);
+            if (n > 0) append(numbuf, static_cast<size_t>(n));
+        };
+
+        char temp[32];
         for (size_t i = 0; i < tokens_pos.size(); i++) {
             if (tokens_pos[i] == &tok_date) {
-                msg.append(tokens_messages[i]);
-                msg.append(data_provider->getCurrentDate(msg.data() + msg.size(), 16));
+                append(tokens_messages[i].data(), tokens_messages[i].size());
+                data_provider->getCurrentDate(temp, sizeof(temp));
+                appendC(temp);
             }
             if (tokens_pos[i] == &tok_time) {
-                msg.append(tokens_messages[i]);
-                msg.append(data_provider->getCurrentTime(msg.data() + msg.size(), 16));
+                append(tokens_messages[i].data(), tokens_messages[i].size());
+                data_provider->getCurrentTime(temp, sizeof(temp));
+                appendC(temp);
             }
             if (tokens_pos[i] == &tok_type) {
-                msg.append(tokens_messages[i]);
-                msg.append(msg_log_types[msgType]);
+                append(tokens_messages[i].data(), tokens_messages[i].size());
+                appendC(msg_log_types[msgType]);
             }
             if (tokens_pos[i] == &tok_file) {
-                msg.append(tokens_messages[i]);
-                msg.append(file);
+                append(tokens_messages[i].data(), tokens_messages[i].size());
+                appendC(file);
             }
             if (tokens_pos[i] == &tok_thread) {
-                msg.append(tokens_messages[i]);
-                msg.append(data_provider->getThreadId(msg.data() + msg.size(), 16));
+                append(tokens_messages[i].data(), tokens_messages[i].size());
+                data_provider->getThreadId(temp, sizeof(temp));
+                appendC(temp);
             }
             if (tokens_pos[i] == &tok_func) {
-                msg.append(tokens_messages[i]);
-                msg.append(func);
+                append(tokens_messages[i].data(), tokens_messages[i].size());
+                appendC(func);
             }
             if (tokens_pos[i] == &tok_line) {
-                msg.append(tokens_messages[i]);
-                msg.append(std::to_string(line));
+                append(tokens_messages[i].data(), tokens_messages[i].size());
+                appendInt(line);
             }
             if (tokens_pos[i] == &tok_pid) {
-                msg.append(tokens_messages[i]);
-                msg.append(data_provider->getProcessName(msg.data() + msg.size(), 64));
+                append(tokens_messages[i].data(), tokens_messages[i].size());
+                data_provider->getProcessName(temp, sizeof(temp));
+                appendC(temp);
             }
             if (tokens_pos[i] == &tok_message) {
-                msg.append(tokens_messages[i]);
-                msg.append(str);
+                append(tokens_messages[i].data(), tokens_messages[i].size());
+                appendC(str);
             }
         }
-        return msg;
+        return pos;
     }
 
     static void addSink(ILogSink *sink) {
