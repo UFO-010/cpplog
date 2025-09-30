@@ -5,25 +5,30 @@
 #include "logger.h"
 
 #if defined(__GNUC__) || defined(__clang__)
-    #define sDebug() Log::MsgSender(Log::DebugMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sInfo() Log::MsgSender(Log::InfoMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sWarning() Log::MsgSender(Log::WarningMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sError() Log::MsgSender(Log::ErrorMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sFatal() Log::MsgSender(Log::FatalMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
+    #define sDebug() \
+        Log::MsgSender(Log::messageType::DebugMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
+    #define sInfo() \
+        Log::MsgSender(Log::messageType::InfoMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
+    #define sWarning() \
+        Log::MsgSender(Log::messageType::WarningMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
+    #define sError() \
+        Log::MsgSender(Log::messageType::ErrorMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
+    #define sFatal() \
+        Log::MsgSender(Log::messageType::FatalMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
 
 #elif _MSC_VER && !__INTEL_COMPILER
-    #define sDebug() Log::MsgSender(Log::messageType::Debug, __FILE__, __FUNCSIG__, __LINE__)
-    #define sInfo() Log::MsgSender(Log::messageType::Info, __FILE__, __FUNCSIG__, __LINE__)
-    #define sWarning() Log::MsgSender(Log::messageType::Warning, __FILE__, __FUNCSIG__, __LINE__)
-    #define sError() Log::MsgSender(Log::messageType::Error, __FILE__, __FUNCSIG__, __LINE__)
-    #define sFatal() Log::MsgSender(Log::messageType::Fatal, __FILE__, __FUNCSIG__, __LINE__)
+    #define sDebug() Log::MsgSender(Log::messageType::DebugMsg, __FILE__, __FUNCSIG__, __LINE__)
+    #define sInfo() Log::MsgSender(Log::messageType::InfoMsg, __FILE__, __FUNCSIG__, __LINE__)
+    #define sWarning() Log::MsgSender(Log::messageType::WarningMsg, __FILE__, __FUNCSIG__, __LINE__)
+    #define sError() Log::MsgSender(Log::messageType::ErrorMsg, __FILE__, __FUNCSIG__, __LINE__)
+    #define sFatal() Log::MsgSender(Log::messageType::FatalMsg, __FILE__, __FUNCSIG__, __LINE__)
 
 #elif
-    #define sDebug() Log::MsgSender(Log::messageType::Debug, __FILE__, __func__, __LINE__)
-    #define sInfo() Log::MsgSender(Log::messageType::Info, __FILE__, __func__, __LINE__)
-    #define sWarning() Log::MsgSender(Log::messageType::Warning, __FILE__, __func__, __LINE__)
-    #define sError() Log::MsgSender(Log::messageType::Error, __FILE__, __func__, __LINE__)
-    #define sFatal() Log::MsgSender(Log::messageType::Fatal, __FILE__, __func__, __LINE__)
+    #define sDebug() Log::MsgSender(Log::messageType::DebugMsg, __FILE__, __func__, __LINE__)
+    #define sInfo() Log::MsgSender(Log::messageType::InfoMsg, __FILE__, __func__, __LINE__)
+    #define sWarning() Log::MsgSender(Log::messageType::WarningMsg, __FILE__, __func__, __LINE__)
+    #define sError() Log::MsgSender(Log::messageType::ErrorMsg, __FILE__, __func__, __LINE__)
+    #define sFatal() Log::MsgSender(Log::messageType::FatalMsg, __FILE__, __func__, __LINE__)
 
 #endif
 
@@ -50,8 +55,7 @@ namespace Log {
 class MsgSender {
 public:
     MsgSender(const messageType &msgType)
-        : st(),
-          message_type(msgType),
+        : message_type(msgType),
           file(),
           function(),
           line() {
@@ -67,27 +71,7 @@ public:
         st.str().reserve(128);
     }
 
-    ~MsgSender() {
-        switch (message_type) {
-            case DebugMsg:
-                Logger::debug(file, function, line, st.str().c_str());
-                break;
-            case InfoMsg:
-                Logger::info(file, function, line, st.str().c_str());
-                break;
-            case WarningMsg:
-                Logger::warning(file, function, line, st.str().c_str());
-                break;
-            case ErrorMsg:
-                Logger::error(file, function, line, st.str().c_str());
-                break;
-            case FatalMsg:
-                Logger::fatal(file, function, line, st.str().c_str());
-                break;
-            default:
-                break;
-        }
-    }
+    ~MsgSender() { Logger::log(message_type, file, function, line, st.str().c_str()); }
 
     MsgSender &operator<<(char str) {
         st << str;
@@ -146,7 +130,7 @@ public:
 
 private:
     std::stringstream st;
-    int message_type;
+    messageType message_type;
     const char *file;
     const char *function;
     int line;

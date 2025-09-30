@@ -23,7 +23,7 @@ public:
             int reset_pos = static_cast<int>(ansi_cols::RESET_COLOR);
 
             colorized_msg.reserve((sizeof(msg_colors[reset_pos]) * 2) + size);
-            colorized_msg.append(msg_colors[msgType]);
+            colorized_msg.append(msg_colors[static_cast<int>(msgType)]);
             colorized_msg.append(data);
             colorized_msg.append(msg_colors[reset_pos]);
             std::cout << colorized_msg;

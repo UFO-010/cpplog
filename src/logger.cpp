@@ -23,6 +23,6 @@ const char *Logger::msg_log_types[] = {"FATAL", "ERROR", "WARN", "INFO", "DEBUG"
 std::vector<const std::string *> Logger::tokens_pos = {&tok_type, &tok_message};
 std::vector<std::string> Logger::tokens_messages = {"\t", ""};
 
-void (*Logger::user_handler)(const messageType &msgType, const std::string &message) = 0;
+void (*Logger::user_handler)(const messageType &msgType, const char *message, size_t msg_size) = 0;
 
 }  // namespace Log

@@ -8,34 +8,51 @@
 #include "logger_config.h"
 
 #if defined(__GNUC__) || defined(__clang__)
-
-    #define Debug(message) Log::Logger::debug(__FILE__, __PRETTY_FUNCTION__, __LINE__, message)
-    #define Info(message) Log::Logger::info(__FILE__, __PRETTY_FUNCTION__, __LINE__, message)
-    #define Warning(message) Log::Logger::warning(__FILE__, __PRETTY_FUNCTION__, __LINE__, message)
-    #define Error(message) Log::Logger::error(__FILE__, __PRETTY_FUNCTION__, __LINE__, message)
-    #define Fatal(message) Log::Logger::fatal(__FILE__, __PRETTY_FUNCTION__, __LINE__, message)
+    #define Debug(message)                                                                    \
+        Log::Logger::log(Log::messageType::DebugMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__, \
+                         message)
+    #define Info(message)                                                                    \
+        Log::Logger::log(Log::messageType::InfoMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__, \
+                         message)
+    #define Warning(message)                                                                    \
+        Log::Logger::log(Log::messageType::WarningMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__, \
+                         message)
+    #define Error(message)                                                                    \
+        Log::Logger::log(Log::messageType::ErrorMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__, \
+                         message)
+    #define Fatal(message)                                                                    \
+        Log::Logger::log(Log::messageType::FatalMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__, \
+                         message)
 
 #elif _MSC_VER && !__INTEL_COMPILER
-
-    #define Debug(message) Log::Logger::debug(__FILE__, __FUNCSIG__, __LINE__, message)
-    #define Info(message) Log::Logger::info(__FILE__, __FUNCSIG__, __LINE__, message)
-    #define Warning(message) Log::Logger::warning(__FILE__, __FUNCSIG__, __LINE__, message)
-    #define Error(message) Log::Logger::error(__FILE__, __FUNCSIG__, __LINE__, message)
-    #define Fatal(message) Logger::fatal(__FILE__, __FUNCSIG__, __LINE__, message)
+    #define Debug(message) \
+        Log::Logger::log(Log::messageType::DebugMsg, __FILE__, __FUNCSIG__, __LINE__, message)
+    #define Info(message) \
+        Log::Logger::log(Log::messageType::InfoMsg, __FILE__, __FUNCSIG__, __LINE__, message)
+    #define Warning(message) \
+        Log::Logger::log(Log::messageType::WarningMsg, __FILE__, __FUNCSIG__, __LINE__, message)
+    #define Error(message) \
+        Log::Logger::log(Log::messageType::ErrorMsg, __FILE__, __FUNCSIG__, __LINE__, message)
+    #define Fatal(message) \
+        Log::Logger::log(Log::messageType::FatalMsg, __FILE__, __FUNCSIG__, __LINE__, message)
 
 #elif
-
-    #define Debug(message) Log::Logger::debug(__FILE__, __func__, __LINE__, message)
-    #define Info(message) Log::Logger::info(__FILE__, __func__, __LINE__, message)
-    #define Warning(message) Log::Logger::warning(__FILE__, __func__, __LINE__, message)
-    #define Error(message) Log::Logger::error(__FILE__, __func__, __LINE__, message)
-    #define Fatal(message) Log::Logger::fatal(__FILE__, __func__, __LINE__, message)
+    #define Debug(message) \
+        Log::Logger::log(Log::messageType::DebugMsg, __FILE__, __func__, __LINE__, message)
+    #define Info(message) \
+        Log::Logger::log(Log::messageType::InfoMsg, __FILE__, __func__, __LINE__, message)
+    #define Warning(message) \
+        Log::Logger::log(Log::messageType::WarningMsg, __FILE__, __func__, __LINE__, message)
+    #define Error(message) \
+        Log::Logger::log(Log::messageType::ErrorMsg, __FILE__, __func__, __LINE__, message)
+    #define Fatal(message) \
+        Log::Logger::log(Log::messageType::FatalMsg, __FILE__, __func__, __LINE__, message)
 
 #endif
 
 namespace Log {
 
-enum messageType : int {
+enum class messageType : int {
     FatalMsg,
     ErrorMsg,
     WarningMsg,
@@ -154,101 +171,28 @@ public:
     }
 
     static void setUserHandler(void (*_handler)(const messageType &msgType,
-                                                const std::string &message)) {
+                                                const char *message,
+                                                size_t msg_size)) {
         user_handler = _handler;
     }
 
-    static void debug(const char *file, const char *func, int line, const char *str = nullptr) {
-        if (log_level < DebugMsg) {
+    static void log(
+        const messageType &msgType, const char *file, const char *func, int line, const char *str) {
+        if (log_level < static_cast<int>(msgType)) {
             return;
         }
 
-        static char msg[LOGGER_MAX_STR_SIZE];
-        size_t msg_size = createMessage(DebugMsg, file, func, line, str, msg, sizeof(msg));
+        char msg[LOGGER_MAX_STR_SIZE];
+        size_t msg_size = createMessage(msgType, file, func, line, str, msg, sizeof(msg));
+
 #if ENABLE_SINKS == 1
         for (int i = 0; i < sink_count; i++) {
-            sinks[i]->send(DebugMsg, msg, msg_size);
+            sinks[i]->send(msgType, msg, msg_size);
         }
 #endif
 #if ENABLE_PRINT_CALLBACK == 1
         if (user_handler != nullptr) {
-            user_handler(DebugMsg, msg);
-        }
-#endif
-    }
-
-    static void info(const char *file, const char *func, int line, const char *str = nullptr) {
-        if (log_level < InfoMsg) {
-            return;
-        }
-
-        static char msg[LOGGER_MAX_STR_SIZE];
-        size_t msg_size = createMessage(InfoMsg, file, func, line, str, msg, sizeof(msg));
-#if ENABLE_SINKS == 1
-        for (int i = 0; i < sink_count; i++) {
-            sinks[i]->send(InfoMsg, msg, msg_size);
-        }
-#endif
-#if ENABLE_PRINT_CALLBACK == 1
-        if (user_handler != nullptr) {
-            user_handler(InfoMsg, msg);
-        }
-#endif
-    }
-
-    static void warning(const char *file, const char *func, int line, const char *str = nullptr) {
-        if (log_level < WarningMsg) {
-            return;
-        }
-
-        static char msg[LOGGER_MAX_STR_SIZE];
-        size_t msg_size = createMessage(WarningMsg, file, func, line, str, msg, sizeof(msg));
-#if ENABLE_SINKS == 1
-        for (int i = 0; i < sink_count; i++) {
-            sinks[i]->send(WarningMsg, msg, msg_size);
-        }
-#endif
-#if ENABLE_PRINT_CALLBACK == 1
-        if (user_handler != nullptr) {
-            user_handler(WarningMsg, msg);
-        }
-#endif
-    }
-
-    static void error(const char *file, const char *func, int line, const char *str = nullptr) {
-        if (log_level < ErrorMsg) {
-            return;
-        }
-
-        static char msg[LOGGER_MAX_STR_SIZE];
-        size_t msg_size = createMessage(ErrorMsg, file, func, line, str, msg, sizeof(msg));
-#if ENABLE_SINKS == 1
-        for (int i = 0; i < sink_count; i++) {
-            sinks[i]->send(ErrorMsg, msg, msg_size);
-        }
-#endif
-#if ENABLE_PRINT_CALLBACK == 1
-        if (user_handler != nullptr) {
-            user_handler(ErrorMsg, msg);
-        }
-#endif
-    }
-
-    static void fatal(const char *file, const char *func, int line, const char *str = nullptr) {
-        if (log_level < FatalMsg) {
-            return;
-        }
-
-        static char msg[LOGGER_MAX_STR_SIZE];
-        size_t msg_size = createMessage(FatalMsg, file, func, line, str, msg, sizeof(msg));
-#if ENABLE_SINKS == 1
-        for (int i = 0; i < sink_count; i++) {
-            sinks[i]->send(FatalMsg, msg, msg_size);
-        }
-#endif
-#if ENABLE_PRINT_CALLBACK == 1
-        if (user_handler != nullptr) {
-            user_handler(FatalMsg, msg);
+            user_handler(msgType, msg, msg_size);
         }
 #endif
     }
@@ -315,7 +259,7 @@ public:
             }
             if (tokens_pos[i] == &tok_type) {
                 append(tokens_messages[i].data(), tokens_messages[i].size());
-                appendC(msg_log_types[msgType]);
+                appendC(msg_log_types[static_cast<int>(msgType)]);
             }
             if (tokens_pos[i] == &tok_file) {
                 append(tokens_messages[i].data(), tokens_messages[i].size());
@@ -344,6 +288,14 @@ public:
                 appendC(str);
             }
         }
+
+        if (pos < bufSize) {
+            outBuf[pos] = '\0';
+        } else if (bufSize != 0) {
+            outBuf[bufSize - 1] = '\0';
+            pos = bufSize - 1;
+        }
+
         return pos;
     }
 
@@ -363,13 +315,12 @@ private:
     static ILogSink *sinks[LOGGER_MAX_SINKS];
     static int sink_count;
     static const DataProvider *data_provider;
+    static void (*user_handler)(const messageType &msgType, const char *message, size_t msg_size);
 
     /// holds pointers to tokens, so the output will look the  same as @brief setMessagePattern
     static std::vector<const std::string *> tokens_pos;
     /// holds messages that placed after tokens passed in  @brief setMessagePatter
     static std::vector<std::string> tokens_messages;
-
-    static void (*user_handler)(const messageType &msgType, const std::string &message);
 
     /// token for message pattern
     static const std::string tok_date;
