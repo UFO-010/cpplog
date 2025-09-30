@@ -5,8 +5,7 @@
 #include <vector>
 #include <cstring>
 
-constexpr int LOGGER_MAX_SINKS = 4;
-constexpr size_t LOGGER_MAX_STR_SIZE = 512;
+#include "logger_config.h"
 
 #if defined(__GNUC__) || defined(__clang__)
 
@@ -36,7 +35,7 @@ constexpr size_t LOGGER_MAX_STR_SIZE = 512;
 
 namespace Log {
 
-enum messageType {
+enum messageType : int {
     FatalMsg,
     ErrorMsg,
     WarningMsg,
@@ -46,7 +45,6 @@ enum messageType {
 
 class ILogSink {
 public:
-    virtual ~ILogSink() = default;
     virtual void send(const messageType &msgType, const char *data, size_t size) = 0;
 };
 
@@ -91,14 +89,16 @@ public:
 
         static char msg[LOGGER_MAX_STR_SIZE];
         size_t msg_size = createMessage(DebugMsg, file, func, line, str, msg, sizeof(msg));
-
+#if ENABLE_SINKS == 1
         for (int i = 0; i < sink_count; i++) {
             sinks[i]->send(DebugMsg, msg, msg_size);
         }
-
+#endif
+#if ENABLE_PRINT_CALLBACK == 1
         if (user_handler != nullptr) {
             user_handler(DebugMsg, msg);
         }
+#endif
     }
 
     static void info(const char *file, const char *func, int line, const char *str = nullptr) {
@@ -108,14 +108,16 @@ public:
 
         static char msg[LOGGER_MAX_STR_SIZE];
         size_t msg_size = createMessage(InfoMsg, file, func, line, str, msg, sizeof(msg));
-
+#if ENABLE_SINKS == 1
         for (int i = 0; i < sink_count; i++) {
             sinks[i]->send(InfoMsg, msg, msg_size);
         }
-
+#endif
+#if ENABLE_PRINT_CALLBACK == 1
         if (user_handler != nullptr) {
             user_handler(InfoMsg, msg);
         }
+#endif
     }
 
     static void warning(const char *file, const char *func, int line, const char *str = nullptr) {
@@ -125,14 +127,16 @@ public:
 
         static char msg[LOGGER_MAX_STR_SIZE];
         size_t msg_size = createMessage(WarningMsg, file, func, line, str, msg, sizeof(msg));
-
+#if ENABLE_SINKS == 1
         for (int i = 0; i < sink_count; i++) {
             sinks[i]->send(WarningMsg, msg, msg_size);
         }
-
+#endif
+#if ENABLE_PRINT_CALLBACK == 1
         if (user_handler != nullptr) {
             user_handler(WarningMsg, msg);
         }
+#endif
     }
 
     static void error(const char *file, const char *func, int line, const char *str = nullptr) {
@@ -142,13 +146,16 @@ public:
 
         static char msg[LOGGER_MAX_STR_SIZE];
         size_t msg_size = createMessage(ErrorMsg, file, func, line, str, msg, sizeof(msg));
-
+#if ENABLE_SINKS == 1
         for (int i = 0; i < sink_count; i++) {
             sinks[i]->send(ErrorMsg, msg, msg_size);
         }
+#endif
+#if ENABLE_PRINT_CALLBACK == 1
         if (user_handler != nullptr) {
             user_handler(ErrorMsg, msg);
         }
+#endif
     }
 
     static void fatal(const char *file, const char *func, int line, const char *str = nullptr) {
@@ -158,14 +165,16 @@ public:
 
         static char msg[LOGGER_MAX_STR_SIZE];
         size_t msg_size = createMessage(FatalMsg, file, func, line, str, msg, sizeof(msg));
-
+#if ENABLE_SINKS == 1
         for (int i = 0; i < sink_count; i++) {
             sinks[i]->send(FatalMsg, msg, msg_size);
         }
-
+#endif
+#if ENABLE_PRINT_CALLBACK == 1
         if (user_handler != nullptr) {
             user_handler(FatalMsg, msg);
         }
+#endif
     }
 
     /**
@@ -177,6 +186,7 @@ public:
      * @param str input string to print in log message
      * @param outBuf poitner to output buffer
      * @param bufSize max size of buffer
+     *
      * Creates log message with specified in @brief Logger::setMessagePattern
      * view and put it into `outBuf` and control it's size with `bufSize`.
      */
@@ -208,12 +218,12 @@ public:
         auto appendC = [&](const char *s) { append(s, std::strlen(s)); };
 
         auto appendInt = [&](int v) {
-            char numbuf[12];
+            char numbuf[LOGGER_MAX_NUMBUF_SIZE];
             int n = std::snprintf(numbuf, sizeof(numbuf), "%d", v);
             if (n > 0) append(numbuf, static_cast<size_t>(n));
         };
 
-        char temp[32];
+        char temp[LOGGER_MAX_TEMP_SIZE];
         for (size_t i = 0; i < tokens_pos.size(); i++) {
             if (tokens_pos[i] == &tok_date) {
                 append(tokens_messages[i].data(), tokens_messages[i].size());
@@ -315,16 +325,16 @@ private:
 inline void Logger::setMessagePattern(const std::string &str) {
     tokens_messages.clear();
     tokens_pos.clear();
-    tokens_messages.resize(9);
+    tokens_messages.resize(LOGGER_MAX_MESSAGES);
 
     bool maybe_tok_start = false;
     int found_toks = 0;
-    std::string maybe_token = "";
+    std::string maybe_token;
 
     for (size_t i = 0; i < str.size(); i++) {
         if (str[i] == '%') {
             maybe_token = "";
-            maybe_token.reserve(64);
+            maybe_token.reserve(LOGGER_MAX_TOK_SIZE);
             maybe_token.push_back(str[i]);
             i++;
             if ((i < str.size()) && (str[i] == '{')) {
@@ -362,7 +372,6 @@ inline void Logger::setMessagePattern(const std::string &str) {
                 ++found_toks;
             } else if (maybe_token == tok_pid) {
                 tokens_pos.push_back(&tok_pid);
-
                 ++found_toks;
             } else if (maybe_token == tok_message) {
                 tokens_pos.push_back(&tok_message);

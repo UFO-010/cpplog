@@ -24,6 +24,7 @@ add_library(logger STATIC
   "${CMAKE_CURRENT_LIST_DIR}/include/console_sink.h"
   "${CMAKE_CURRENT_LIST_DIR}/include/stream_logger.h"
   "${CMAKE_CURRENT_LIST_DIR}/include/default_provider.h"
+  "${CMAKE_CURRENT_LIST_DIR}/include/logger_config.h"
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
