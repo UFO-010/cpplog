@@ -4,11 +4,11 @@
 #include "logger.h"
 #include <cstring>
 #include <ctime>
+#include <fstream>
 
 #if defined(__linux__) || defined(__APPLE__)
     #include <sys/syscall.h>
     #include <unistd.h>
-    #include <fstream>
 #endif
 
 #if defined(_WIN32)
@@ -21,6 +21,8 @@
 class DefaultDataProvider : public Log::DataProvider {
 public:
     DefaultDataProvider() { getCurrentProcessName(current_process, proc_len); }
+
+    ~DefaultDataProvider() {}
 
     const char *getProcessName(char *buffer, size_t bufferSize) const override {
         size_t size = proc_len > bufferSize ? bufferSize : proc_len;
@@ -110,7 +112,7 @@ private:
     const char *getCurrentProcess(char *buffer, size_t bufferSize) { buffer[0] = '\0'; }
 #endif
     static const size_t proc_len = 64;
-    char current_process[proc_len];
+    char current_process[proc_len] = {};
 };
 
 #if defined(_WIN32)

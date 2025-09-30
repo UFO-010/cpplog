@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+constexpr int LOGGER_MAX_SINKS = 4;
+
 #if defined(__GNUC__) || defined(__clang__)
 
     #define Debug(message) Log::Logger::debug(__FILE__, __PRETTY_FUNCTION__, __LINE__, message)
@@ -42,6 +44,7 @@ enum messageType {
 
 class ILogSink {
 public:
+    virtual ~ILogSink() = default;
     virtual void send(const messageType &msgType, const char *data, size_t size) = 0;
 };
 
@@ -68,9 +71,9 @@ public:
      * @param level priority of messages to display
      * Set logging level. Messages with a lower priority level will be ignored
      */
-    inline static void setLogLevel(int level) { log_level = level; }
+    static void setLogLevel(int level) { log_level = level; }
 
-    inline static int getLevel() { return log_level; }
+    static int getLevel() { return log_level; }
 
     static void setMessagePattern(const std::string &str);
 
@@ -79,18 +82,15 @@ public:
         user_handler = _handler;
     }
 
-    static void debug(const std::string &file,
-                      const std::string &func,
-                      int line,
-                      const std::string &str = nullptr) {
+    static void debug(const char *file, const char *func, int line, const char *str = nullptr) {
         if (log_level < DebugMsg) {
             return;
         }
 
         std::string msg = createMessage(DebugMsg, file, func, line, str);
 
-        for (auto sink : sinks) {
-            sink->send(DebugMsg, msg.c_str(), msg.size());
+        for (int i = 0; i < sink_count; i++) {
+            sinks[i]->send(DebugMsg, msg.c_str(), msg.size());
         }
 
         if (user_handler != nullptr) {
@@ -98,71 +98,62 @@ public:
         }
     }
 
-    static void info(const std::string &file,
-                     const std::string &func,
-                     int line,
-                     const std::string &str = nullptr) {
+    static void info(const char *file, const char *func, int line, const char *str = nullptr) {
         if (log_level < InfoMsg) {
             return;
         }
 
         std::string msg = createMessage(InfoMsg, file, func, line, str);
 
-        for (auto sink : sinks) {
-            sink->send(InfoMsg, msg.c_str(), msg.size());
+        for (int i = 0; i < sink_count; i++) {
+            sinks[i]->send(InfoMsg, msg.c_str(), msg.size());
         }
+
         if (user_handler != nullptr) {
             user_handler(InfoMsg, msg);
         }
     }
 
-    static void warning(const std::string &file,
-                        const std::string &func,
-                        int line,
-                        const std::string &str = nullptr) {
+    static void warning(const char *file, const char *func, int line, const char *str = nullptr) {
         if (log_level < WarningMsg) {
             return;
         }
 
         std::string msg = createMessage(WarningMsg, file, func, line, str);
 
-        for (auto sink : sinks) {
-            sink->send(WarningMsg, msg.c_str(), msg.size());
+        for (int i = 0; i < sink_count; i++) {
+            sinks[i]->send(WarningMsg, msg.c_str(), msg.size());
         }
+
         if (user_handler != nullptr) {
             user_handler(WarningMsg, msg);
         }
     }
 
-    static void error(const std::string &file,
-                      const std::string &func,
-                      int line,
-                      const std::string &str = nullptr) {
+    static void error(const char *file, const char *func, int line, const char *str = nullptr) {
         if (log_level < ErrorMsg) {
             return;
         }
 
         std::string msg = createMessage(ErrorMsg, file, func, line, str);
 
-        for (auto sink : sinks) {
-            sink->send(ErrorMsg, msg.c_str(), msg.size());
+        for (int i = 0; i < sink_count; i++) {
+            sinks[i]->send(ErrorMsg, msg.c_str(), msg.size());
         }
         if (user_handler != nullptr) {
             user_handler(ErrorMsg, msg);
         }
     }
 
-    static void fatal(const std::string &file,
-                      const std::string &func,
-                      int line,
-                      const std::string &str = nullptr) {
+    static void fatal(const char *file, const char *func, int line, const char *str = nullptr) {
         if (log_level < FatalMsg) {
             return;
         }
 
         std::string msg = createMessage(FatalMsg, file, func, line, str);
-        for (auto sink : sinks) {
-            sink->send(FatalMsg, msg.c_str(), msg.size());
+
+        for (int i = 0; i < sink_count; i++) {
+            sinks[i]->send(FatalMsg, msg.c_str(), msg.size());
         }
 
         if (user_handler != nullptr) {
@@ -183,10 +174,10 @@ public:
      * colors directly to the message
      */
     static std::string createMessage(const messageType &msgType,
-                                     const std::string &file,
-                                     const std::string &func,
+                                     const char *file,
+                                     const char *func,
                                      const int line,
-                                     const std::string &str = nullptr) {
+                                     const char *str = nullptr) {
         std::string msg;
         msg.reserve(512);
 
@@ -231,7 +222,12 @@ public:
         return msg;
     }
 
-    static void addSink(ILogSink *sink) { sinks.push_back(sink); }
+    static void addSink(ILogSink *sink) {
+        if (sink_count < LOGGER_MAX_SINKS) {
+            sinks[sink_count] = sink;
+            sink_count++;
+        }
+    }
 
     static void setDataProvider(const DataProvider *provider) { data_provider = provider; }
 
@@ -239,7 +235,8 @@ private:
     Logger() {}
 
     static int log_level;
-    static std::vector<ILogSink *> sinks;
+    static ILogSink *sinks[LOGGER_MAX_SINKS];
+    static int sink_count;
     static const DataProvider *data_provider;
 
     /// holds pointers to tokens, so the output will look the  same as @brief setMessagePattern

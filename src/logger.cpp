@@ -4,7 +4,8 @@
 namespace Log {
 int Logger::log_level = 4;
 
-std::vector<ILogSink *> Logger::sinks = {};
+ILogSink *Logger::sinks[LOGGER_MAX_SINKS] = {};
+int Logger::sink_count = 0;
 const DataProvider *Logger::data_provider = 0;
 
 const std::string Logger::tok_date = "%{date}";

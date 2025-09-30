@@ -70,19 +70,19 @@ public:
     ~MsgSender() {
         switch (message_type) {
             case DebugMsg:
-                Logger::debug(file, function, line, st.str());
+                Logger::debug(file, function, line, st.str().c_str());
                 break;
             case InfoMsg:
-                Logger::info(file, function, line, st.str());
+                Logger::info(file, function, line, st.str().c_str());
                 break;
             case WarningMsg:
-                Logger::warning(file, function, line, st.str());
+                Logger::warning(file, function, line, st.str().c_str());
                 break;
             case ErrorMsg:
-                Logger::error(file, function, line, st.str());
+                Logger::error(file, function, line, st.str().c_str());
                 break;
             case FatalMsg:
-                Logger::fatal(file, function, line, st.str());
+                Logger::fatal(file, function, line, st.str().c_str());
                 break;
             default:
                 break;
