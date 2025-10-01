@@ -1,8 +1,7 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <string>
-#include <vector>
+#include <cstdio>
 #include <cstring>
 
 #include "logger_config.h"
@@ -93,10 +92,10 @@ public:
     static int getLevel() { return log_level; }
 
     /**
-     * @brief Logger::setMessagePattern
-     * @param str Output message pattern
-     *      * Define ouput logging message format to look like.
-     *      * Options : "%{date}"; "%{time}"; "%{type}"; "%{file}"; "%{thread}";
+     * @brief Logger::setLogPattern
+     * @param pattern Output message pattern
+     * Define ouput logging message format to look like.
+     * Options : "%{date}"; "%{time}"; "%{type}"; "%{file}"; "%{thread}";
      * "%{function}"; "%{line}"; "%{pid}"; "%{message}".
      * Always put separators between options
      * @example "%{date} %{time}"
@@ -104,70 +103,67 @@ public:
      * @example "%{date}%{time}"
      * Output: "<current date>%{time}"
      */
-    static void setMessagePattern(const std::string &str) {
-        tokens_messages.clear();
-        tokens_pos.clear();
-        tokens_messages.resize(LOGGER_MAX_MESSAGES);
+    static void setLogPattern(const char *pattern) {
+        token_ops_count = 0;
+        size_t literal_buffer_pos = 0;
 
-        bool maybe_tok_start = false;
-        int found_toks = 0;
-        std::string maybe_token;
+        const char *p = pattern;
+        const char *start_of_literal = p;
 
-        for (size_t i = 0; i < str.size(); i++) {
-            if (str[i] == '%') {
-                maybe_token = "";
-                maybe_token.reserve(LOGGER_MAX_TOK_SIZE);
-                maybe_token.push_back(str[i]);
-                i++;
-                if ((i < str.size()) && (str[i] == '{')) {
-                    maybe_tok_start = true;
-                    maybe_token.push_back(str[i]);
-                    i++;
+        while (*p && token_ops_count < LOGGER_MAX_TOKENS) {
+            if (*p != '%') {
+                ++p;
+                continue;
+            }
+            if (*(p + 1) != '{') {
+                ++p;
+                continue;
+            }
+
+            const char *token_start = p;
+            const char *brace_end = strchr(p + 2, '}');
+            if (!brace_end) break;
+
+            size_t literal_len = static_cast<size_t>(token_start - start_of_literal);
+
+            if (literal_buffer_pos + literal_len > LOGGER_LITERAL_BUFFER_SIZE) {
+                literal_len = LOGGER_LITERAL_BUFFER_SIZE - literal_buffer_pos;
+            }
+
+            char *dest = literal_buffer + literal_buffer_pos;
+            if (literal_len > 0) {
+                memcpy(dest, start_of_literal, literal_len);
+            }
+            literal_buffer_pos += literal_len;
+
+            size_t token_len = static_cast<size_t>(brace_end + 1 - token_start);
+            tokenType found_type = TokInvalid;
+            for (size_t i = 0; i < num_token_types; ++i) {
+                if (strncmp(token_start, tokens[i], token_len) == 0) {
+                    found_type = static_cast<tokenType>(i);
+                    break;
                 }
             }
 
-            if (maybe_tok_start) {
-                maybe_token.push_back(str[i]);
-            }
-
-            if ((str[i] == '}') && maybe_tok_start) {
-                if (maybe_token == tok_date) {
-                    tokens_pos.push_back(&tok_date);
-                    ++found_toks;
-                } else if (maybe_token == tok_time) {
-                    tokens_pos.push_back(&tok_time);
-                    ++found_toks;
-                } else if (maybe_token == tok_type) {
-                    tokens_pos.push_back(&tok_type);
-                    ++found_toks;
-                } else if (maybe_token == tok_file) {
-                    tokens_pos.push_back(&tok_file);
-                    ++found_toks;
-                } else if (maybe_token == tok_thread) {
-                    tokens_pos.push_back(&tok_thread);
-                    ++found_toks;
-                } else if (maybe_token == tok_func) {
-                    tokens_pos.push_back(&tok_func);
-                    ++found_toks;
-                } else if (maybe_token == tok_line) {
-                    tokens_pos.push_back(&tok_line);
-                    ++found_toks;
-                } else if (maybe_token == tok_pid) {
-                    tokens_pos.push_back(&tok_pid);
-                    ++found_toks;
-                } else if (maybe_token == tok_message) {
-                    tokens_pos.push_back(&tok_message);
-                    ++found_toks;
-                }
-                maybe_tok_start = false;
-                i++;
-                maybe_token = "";
-            }
-
-            if (!maybe_tok_start && i < str.size()) {
-                tokens_messages[found_toks].push_back(str[i]);
+            if (found_type != TokInvalid) {
+                tokenOps[token_ops_count] = {found_type, dest, literal_len};
+                ++token_ops_count;
+                p = brace_end + 1;
+                start_of_literal = p;
+            } else {
+                ++p;
             }
         }
+
+        // size_t tail_len = strlen(start_of_literal);
+        // if (literal_buffer_pos + tail_len > LOGGER_LITERAL_BUFFER_SIZE) {
+        //     tail_len = LOGGER_LITERAL_BUFFER_SIZE - literal_buffer_pos;
+        // }
+        // char *pattern_tail = literal_buffer + literal_buffer_pos;
+        // if (tail_len > 0) {
+        //     memcpy(const_cast<char *>(pattern_tail), start_of_literal, tail_len);
+        // }
+        // size_t pattern_tail_len = tail_len;
     }
 
     static void setUserHandler(void (*_handler)(const messageType &msgType,
@@ -182,7 +178,7 @@ public:
             return;
         }
 
-        char msg[LOGGER_MAX_STR_SIZE];
+        static thread_local char msg[LOGGER_MAX_STR_SIZE];
         size_t msg_size = createMessage(msgType, file, func, line, str, msg, sizeof(msg));
 
 #if ENABLE_SINKS == 1
@@ -246,46 +242,44 @@ public:
         };
 
         char temp[LOGGER_MAX_TEMP_SIZE];
-        for (size_t i = 0; i < tokens_pos.size(); i++) {
-            if (tokens_pos[i] == &tok_date) {
-                append(tokens_messages[i].data(), tokens_messages[i].size());
-                data_provider->getCurrentDate(temp, sizeof(temp));
-                appendC(temp);
-            }
-            if (tokens_pos[i] == &tok_time) {
-                append(tokens_messages[i].data(), tokens_messages[i].size());
-                data_provider->getCurrentTime(temp, sizeof(temp));
-                appendC(temp);
-            }
-            if (tokens_pos[i] == &tok_type) {
-                append(tokens_messages[i].data(), tokens_messages[i].size());
-                appendC(msg_log_types[static_cast<int>(msgType)]);
-            }
-            if (tokens_pos[i] == &tok_file) {
-                append(tokens_messages[i].data(), tokens_messages[i].size());
-                appendC(file);
-            }
-            if (tokens_pos[i] == &tok_thread) {
-                append(tokens_messages[i].data(), tokens_messages[i].size());
-                data_provider->getThreadId(temp, sizeof(temp));
-                appendC(temp);
-            }
-            if (tokens_pos[i] == &tok_func) {
-                append(tokens_messages[i].data(), tokens_messages[i].size());
-                appendC(func);
-            }
-            if (tokens_pos[i] == &tok_line) {
-                append(tokens_messages[i].data(), tokens_messages[i].size());
-                appendInt(line);
-            }
-            if (tokens_pos[i] == &tok_pid) {
-                append(tokens_messages[i].data(), tokens_messages[i].size());
-                data_provider->getProcessName(temp, sizeof(temp));
-                appendC(temp);
-            }
-            if (tokens_pos[i] == &tok_message) {
-                append(tokens_messages[i].data(), tokens_messages[i].size());
-                appendC(str);
+        for (size_t i = 0; i < token_ops_count; i++) {
+            append(tokenOps[i].literal, tokenOps[i].literal_len);
+            switch (tokenOps[i].type) {
+                case TokDate:
+                    data_provider->getCurrentDate(temp, sizeof(temp));
+                    appendC(temp);
+                    break;
+                case TokTime:
+                    data_provider->getCurrentTime(temp, sizeof(temp));
+                    appendC(temp);
+                    break;
+                case TokLevel:
+                    appendC(msg_log_types[static_cast<int>(msgType)]);
+                    break;
+                case TokFile:
+                    appendC(file);
+                    break;
+                case TokThread:
+                    data_provider->getThreadId(temp, sizeof(temp));
+                    appendC(temp);
+                    break;
+                case TokFunc:
+                    appendC(func);
+                    break;
+                case TokLine:
+                    appendInt(line);
+                    break;
+                case TokPid:
+                    data_provider->getProcessName(temp, sizeof(temp));
+                    appendC(temp);
+                    break;
+                case TokMessage:
+                    appendC(str);
+                    break;
+                case TokInvalid:
+                    break;
+                default:
+                    break;
             }
         }
 
@@ -306,35 +300,51 @@ public:
         }
     }
 
-    static void setDataProvider(const DataProvider *provider) { data_provider = provider; }
+    static void setDataProvider(DataProvider *provider) { data_provider = provider; }
 
 private:
     Logger() {}
 
+    enum tokenType {
+        TokDate,
+        TokTime,
+        TokLevel,
+        TokFile,
+        TokThread,
+        TokFunc,
+        TokLine,
+        TokPid,
+        TokMessage,
+        TokInvalid
+    };
+
+    struct TokenOp {
+        tokenType type;
+        const char *literal;
+        size_t literal_len;
+    };
+
     static int log_level;
     static ILogSink *sinks[LOGGER_MAX_SINKS];
     static int sink_count;
-    static const DataProvider *data_provider;
+    static DataProvider *data_provider;
     static void (*user_handler)(const messageType &msgType, const char *message, size_t msg_size);
 
     /// holds pointers to tokens, so the output will look the  same as @brief setMessagePattern
-    static std::vector<const std::string *> tokens_pos;
+    static TokenOp tokenOps[LOGGER_MAX_TOKENS];
+    /// holds number of found tokens
+    static size_t token_ops_count;
     /// holds messages that placed after tokens passed in  @brief setMessagePatter
-    static std::vector<std::string> tokens_messages;
+    static char literal_buffer[LOGGER_LITERAL_BUFFER_SIZE];
 
-    /// token for message pattern
-    static const std::string tok_date;
-    static const std::string tok_time;
-    static const std::string tok_type;
-    static const std::string tok_file;
-    static const std::string tok_thread;
-    static const std::string tok_func;
-    static const std::string tok_line;
-    static const std::string tok_pid;
-    static const std::string tok_message;
+    /// tokens for message pattern
+    static constexpr const char *tokens[] = {"%{date}", "%{time}",   "%{type}",
+                                             "%{file}", "%{thread}", "%{function}",
+                                             "%{line}", "%{pid}",    "%{message}"};
+    static constexpr size_t num_token_types = sizeof(tokens) / sizeof(tokens[0]);
 
     /// types of logging level, added to output message
-    static const char *msg_log_types[];
+    static constexpr const char *msg_log_types[] = {"FATAL", "ERROR", "WARN", "INFO", "DEBUG"};
 };
 
 }  // namespace Log

@@ -43,9 +43,10 @@ int main() {
     Log::Logger::addSink(&console);
 
     //  set message pattern
-    Log::Logger::setMessagePattern(
+    Log::Logger::setLogPattern(
         "%{type}\t %{date} %{time} %{pid} file %{file} "
         "function %{function} line %{line} %{message}");
+
     Error("aaa\n");  // simple log
 
     std::thread thread1 = std::thread(&thread_func1);

@@ -10,6 +10,8 @@ constexpr size_t LOGGER_MAX_TOK_SIZE = 64;     /// Maximum length of token
 constexpr size_t LOGGER_MAX_NUMBUF_SIZE = 12;  /// Maximum length of string to place numbers
 constexpr size_t LOGGER_MAX_MESSAGES = 9;      /// Maximum number of user messages to place between
                                                /// tokens
+constexpr size_t LOGGER_MAX_TOKENS = 18;
+constexpr size_t LOGGER_LITERAL_BUFFER_SIZE = 64;
 
 #define ENABLE_PRINT_CALLBACK 0
 #define ENABLE_SINKS 1
