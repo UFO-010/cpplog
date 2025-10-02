@@ -1,10 +1,10 @@
 
 #include <thread>
 
-#include "logger.h"
-#include "console_sink.h"
-#include "stream_logger.h"
-#include "default_provider.h"
+#include "../include/logger.h"
+#include "../include/console_sink.h"
+#include "../include/stream_logger.h"
+#include "../include/default_provider.h"
 
 void thread_func1() {
     for (int i = 0; i < 1000; i++) {
@@ -35,7 +35,7 @@ void thread_func2() {
 
 int main() {
     Log::Logger::setLogLevel(4);
-    static DefaultDataProvider defaultDataProvider;
+    DefaultDataProvider defaultDataProvider;
     Log::Logger::setDataProvider(&defaultDataProvider);
 
     auto console = ConsoleSink();

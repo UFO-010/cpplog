@@ -10,24 +10,39 @@
     #define LOG_CURRENT_FUNC __PRETTY_FUNCTION__
 #elif _MSC_VER && !__INTEL_COMPILER
     #define LOG_CURRENT_FUNC __FUNCSIG__
-#elif
+#else
     #define LOG_CURRENT_FUNC __func__
 #endif
 
-#define Debug(message) \
-    Log::Logger::log(Log::messageType::DebugMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, message)
-#define Info(message) \
-    Log::Logger::log(Log::messageType::InfoMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, message)
-#define Warning(message) \
-    Log::Logger::log(Log::messageType::WarningMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, message)
-#define Error(message) \
-    Log::Logger::log(Log::messageType::ErrorMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, message)
-#define Fatal(message) \
-    Log::Logger::log(Log::messageType::FatalMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, message)
+#define Debug(message)                                                                     \
+    if constexpr (LOGGER_LOG_DEBUG_ENABLED) {                                              \
+        Log::Logger::log(Log::messageType::DebugMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, \
+                         message);                                                         \
+    }
+#define Info(message)                                                                     \
+    if constexpr (LOGGER_LOG_INFO_ENABLED) {                                              \
+        Log::Logger::log(Log::messageType::InfoMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, \
+                         message);                                                        \
+    }
+#define Warning(message)                                                                     \
+    if constexpr (LOGGER_LOG_WARNING_ENABLED) {                                              \
+        Log::Logger::log(Log::messageType::WarningMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, \
+                         message);                                                           \
+    }
+#define Error(message)                                                                     \
+    if constexpr (LOGGER_LOG_ERROR_ENABLED) {                                              \
+        Log::Logger::log(Log::messageType::ErrorMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, \
+                         message);                                                         \
+    }
+#define Fatal(message)                                                                     \
+    if constexpr (LOGGER_LOG_FATAL_ENABLED) {                                              \
+        Log::Logger::log(Log::messageType::FatalMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, \
+                         message);                                                         \
+    }
 
 namespace Log {
 
-enum class messageType : int {
+enum messageType {
     FatalMsg,
     ErrorMsg,
     WarningMsg,
@@ -51,7 +66,8 @@ public:
 /**
  * @brief The Logger class
  *
- * Main logging class.
+ * Main logging class. Uses DataProvider implemented by user to get platform-specific data. Be
+ * careful, object lifetime should be controlled by user.
  */
 class Logger {
 public:
@@ -83,7 +99,7 @@ public:
         const char *p = pattern;
         const char *start_of_literal = p;
 
-        while (*p && tokenOpsCount < LOGGER_MAX_TOKENS) {
+        while (*p != '\0' && tokenOpsCount < LOGGER_MAX_TOKENS) {
             if (*p != '%') {
                 ++p;
                 continue;
@@ -95,7 +111,9 @@ public:
 
             const char *token_start = p;
             const char *brace_end = strchr(p + 2, '}');
-            if (!brace_end) break;
+            if (brace_end == NULL) {
+                break;
+            }
 
             size_t literal_len = static_cast<size_t>(token_start - start_of_literal);
 
@@ -153,11 +171,12 @@ public:
      * @param line number of function this function called from
      * @param str input string to print in log message
      *
-     * Main logging function. Calls provided sinks and callbacks if enabled
+     * Main logging function. Calls provided sinks and callbacks if enabled. Be careful, function
+     * itself don't control logging level.
      */
     static void log(
         const messageType &msgType, const char *file, const char *func, int line, const char *str) {
-        if (logLevel < static_cast<int>(msgType)) {
+        if (msgType > logLevel) {
             return;
         }
 
