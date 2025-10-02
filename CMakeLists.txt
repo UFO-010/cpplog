@@ -30,16 +30,18 @@ add_library(logger STATIC
 target_include_directories(${PROJECT_NAME} PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/src/"
     "${CMAKE_CURRENT_LIST_DIR}/include/"
-    )
+)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
     ${PROJECT_NAME}_compiler_flags
-    )
+)
 
 
 set(gcc_like_c "$<COMPILE_LANG_AND_ID:C,ARMClang,AppleClang,Clang,GNU,LCC>")
 target_compile_options(${PROJECT_NAME}_compiler_flags_c INTERFACE
-  "$<${gcc_like_c}:$<BUILD_INTERFACE:-Wall;-Wextra;-Wshadow;-Wno-system-headers;-Wno-deprecated;-Wwrite-strings;-Wunused;-Wunused-variable;-Wunused-parameter;-Wunused-function;-Wcast-align;-Wpedantic;-Werror;-ffunction-sections;-fdata-sections>>"
+  "$<${gcc_like_c}:$<BUILD_INTERFACE:-Wall;-Wextra;-Wshadow;-Wno-system-headers;"
+  "-Wno-deprecated;-Wwrite-strings;-Wunused;-Wunused-variable;-Wunused-parameter;"
+  "-Wunused-function;-Wcast-align;-Wpedantic;-Werror;-ffunction-sections;-fdata-sections>>"
 
   # Set build parameters:
   #         Debug
@@ -54,7 +56,10 @@ target_compile_options(${PROJECT_NAME}_compiler_flags_c INTERFACE
 
 set(gcc_like_cxx "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>")
 target_compile_options(${PROJECT_NAME}_compiler_flags_cxx INTERFACE
-  "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wextra;-Wattributes;-Wshadow;-Wno-system-headers;-Wno-deprecated;-Woverloaded-virtual;-Wwrite-strings;-Wunused;-Wunused-variable;-Wunused-parameter;-Wunused-function;-Wcast-align;-Wold-style-cast;-Wpedantic;-Wuninitialized;-ffunction-sections;-fdata-sections;>>"
+  "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wextra;-Wattributes;-Wshadow;-Wno-system-headers;"
+  "-Wno-deprecated;-Woverloaded-virtual;-Wwrite-strings;-Wunused;-Wunused-variable;"
+  "-Wunused-parameter;-Wunused-function;-Wcast-align;-Wold-style-cast;-Wpedantic;"
+  "-Wuninitialized;-ffunction-sections;-fdata-sections;>>"
 
   # Set build parameters:
   #         Debug
