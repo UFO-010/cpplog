@@ -87,9 +87,9 @@ public:
      * @param level priority of messages to display
      * Set logging level. Messages with a lower priority level will be ignored
      */
-    static void setLogLevel(int level) { log_level = level; }
+    static void setLogLevel(int level) { logLevel = level; }
 
-    static int getLevel() { return log_level; }
+    static int getLevel() { return logLevel; }
 
     /**
      * @brief setLogPattern
@@ -104,13 +104,13 @@ public:
      * Output: "<current date>%{time}"
      */
     static void setLogPattern(const char *pattern) {
-        token_ops_count = 0;
+        tokenOpsCount = 0;
         size_t literal_buffer_pos = 0;
 
         const char *p = pattern;
         const char *start_of_literal = p;
 
-        while (*p && token_ops_count < LOGGER_MAX_TOKENS) {
+        while (*p && tokenOpsCount < LOGGER_MAX_TOKENS) {
             if (*p != '%') {
                 ++p;
                 continue;
@@ -130,7 +130,7 @@ public:
                 literal_len = LOGGER_LITERAL_BUFFER_SIZE - literal_buffer_pos;
             }
 
-            char *dest = literal_buffer + literal_buffer_pos;
+            char *dest = literalBuffer + literal_buffer_pos;
             if (literal_len > 0) {
                 memcpy(dest, start_of_literal, literal_len);
             }
@@ -138,7 +138,7 @@ public:
 
             size_t token_len = static_cast<size_t>(brace_end + 1 - token_start);
             tokenType found_type = TokInvalid;
-            for (size_t i = 0; i < num_token_types; ++i) {
+            for (size_t i = 0; i < tokensNumber; ++i) {
                 if (strncmp(token_start, tokens[i], token_len) == 0) {
                     found_type = static_cast<tokenType>(i);
                     break;
@@ -146,8 +146,8 @@ public:
             }
 
             if (found_type != TokInvalid) {
-                tokenOps[token_ops_count] = {found_type, dest, literal_len};
-                ++token_ops_count;
+                tokenOps[tokenOpsCount] = {found_type, dest, literal_len};
+                ++tokenOpsCount;
                 p = brace_end + 1;
                 start_of_literal = p;
             } else {
@@ -169,7 +169,7 @@ public:
     static void setUserHandler(void (*_handler)(const messageType &msgType,
                                                 const char *message,
                                                 size_t msg_size)) {
-        user_handler = _handler;
+        userHandler = _handler;
     }
 
     /**
@@ -184,7 +184,7 @@ public:
      */
     static void log(
         const messageType &msgType, const char *file, const char *func, int line, const char *str) {
-        if (log_level < static_cast<int>(msgType)) {
+        if (logLevel < static_cast<int>(msgType)) {
             return;
         }
 
@@ -192,7 +192,7 @@ public:
         size_t msg_size = createMessage(msgType, file, func, line, str, msg, sizeof(msg));
 
 #if ENABLE_SINKS == 1
-        for (int i = 0; i < sink_count; i++) {
+        for (int i = 0; i < sinkCount; i++) {
             sinks[i]->send(msgType, msg, msg_size);
         }
 #endif
@@ -226,7 +226,7 @@ public:
         size_t pos = 0;
 
         char temp[LOGGER_MAX_TEMP_SIZE];
-        for (size_t i = 0; i < token_ops_count; i++) {
+        for (size_t i = 0; i < tokenOpsCount; i++) {
             append(pos, outBuf, bufSize, tokenOps[i].literal, tokenOps[i].literal_len);
             const int handerPos = static_cast<const int>(tokenOps[i].type);
             tokHanlders[handerPos](pos, outBuf, bufSize, msgType, file, func, line, str, temp,
@@ -244,9 +244,9 @@ public:
     }
 
     static void addSink(ILogSink *sink) {
-        if (sink_count < LOGGER_MAX_SINKS) {
-            sinks[sink_count] = sink;
-            sink_count++;
+        if (sinkCount < LOGGER_MAX_SINKS) {
+            sinks[sinkCount] = sink;
+            sinkCount++;
         }
     }
 
@@ -438,20 +438,20 @@ private:
                                   [[maybe_unused]] char *temp,
                                   [[maybe_unused]] size_t temp_size) {}
 
-    static int log_level;
+    static int logLevel;
     static ILogSink *sinks[LOGGER_MAX_SINKS];
-    static int sink_count;
+    static int sinkCount;
     /// class that provides platform-dependent data
     static DataProvider *data_provider;
     /// callback to print logging message
-    static void (*user_handler)(const messageType &msgType, const char *message, size_t msg_size);
+    static void (*userHandler)(const messageType &msgType, const char *message, size_t msg_size);
 
     /// holds pointers to tokens, so the output will look the  same as @brief setMessagePattern
     static TokenOp tokenOps[LOGGER_MAX_TOKENS];
     /// holds number of found tokens
-    static size_t token_ops_count;
+    static size_t tokenOpsCount;
     /// holds messages that placed after tokens passed in  @brief setMessagePatter
-    static char literal_buffer[LOGGER_LITERAL_BUFFER_SIZE];
+    static char literalBuffer[LOGGER_LITERAL_BUFFER_SIZE];
 
     /// types of logging level, added to output message
     static constexpr const char *msg_log_types[] = {"FATAL", "ERROR", "WARN", "INFO", "DEBUG"};
@@ -460,7 +460,7 @@ private:
     static constexpr const char *tokens[] = {"%{date}", "%{time}",   "%{type}",
                                              "%{file}", "%{thread}", "%{function}",
                                              "%{line}", "%{pid}",    "%{message}"};
-    static constexpr size_t num_token_types = sizeof(tokens) / sizeof(tokens[0]);
+    static constexpr size_t tokensNumber = sizeof(tokens) / sizeof(tokens[0]);
 
     using TokHandlerFunc = void (*)(size_t &pos,
                                     char *outBuf,

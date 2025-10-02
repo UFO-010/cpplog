@@ -85,7 +85,7 @@ private:
     }
 #endif
     /// terminal colors for logging message
-    static constexpr char msg_colors[6][6] = {
+    inline static constexpr char msg_colors[6][6] = {
         "\033[35m",  // magenta FATAL_COLOR
         "\033[31m",  // red ERROR_COLOR
         "\033[33m",  // yellow WARNING_COLOR
