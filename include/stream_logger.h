@@ -4,33 +4,12 @@
 #include <sstream>
 #include "logger.h"
 
-#if defined(__GNUC__) || defined(__clang__)
-    #define sDebug() \
-        Log::MsgSender(Log::messageType::DebugMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sInfo() \
-        Log::MsgSender(Log::messageType::InfoMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sWarning() \
-        Log::MsgSender(Log::messageType::WarningMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sError() \
-        Log::MsgSender(Log::messageType::ErrorMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-    #define sFatal() \
-        Log::MsgSender(Log::messageType::FatalMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__)
-
-#elif _MSC_VER && !__INTEL_COMPILER
-    #define sDebug() Log::MsgSender(Log::messageType::DebugMsg, __FILE__, __FUNCSIG__, __LINE__)
-    #define sInfo() Log::MsgSender(Log::messageType::InfoMsg, __FILE__, __FUNCSIG__, __LINE__)
-    #define sWarning() Log::MsgSender(Log::messageType::WarningMsg, __FILE__, __FUNCSIG__, __LINE__)
-    #define sError() Log::MsgSender(Log::messageType::ErrorMsg, __FILE__, __FUNCSIG__, __LINE__)
-    #define sFatal() Log::MsgSender(Log::messageType::FatalMsg, __FILE__, __FUNCSIG__, __LINE__)
-
-#elif
-    #define sDebug() Log::MsgSender(Log::messageType::DebugMsg, __FILE__, __func__, __LINE__)
-    #define sInfo() Log::MsgSender(Log::messageType::InfoMsg, __FILE__, __func__, __LINE__)
-    #define sWarning() Log::MsgSender(Log::messageType::WarningMsg, __FILE__, __func__, __LINE__)
-    #define sError() Log::MsgSender(Log::messageType::ErrorMsg, __FILE__, __func__, __LINE__)
-    #define sFatal() Log::MsgSender(Log::messageType::FatalMsg, __FILE__, __func__, __LINE__)
-
-#endif
+#define sDebug() Log::MsgSender(Log::messageType::DebugMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__)
+#define sInfo() Log::MsgSender(Log::messageType::InfoMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__)
+#define sWarning() \
+    Log::MsgSender(Log::messageType::WarningMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__)
+#define sError() Log::MsgSender(Log::messageType::ErrorMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__)
+#define sFatal() Log::MsgSender(Log::messageType::FatalMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__)
 
 namespace Log {
 

@@ -7,47 +7,23 @@
 #include "logger_config.h"
 
 #if defined(__GNUC__) || defined(__clang__)
-    #define Debug(message)                                                                    \
-        Log::Logger::log(Log::messageType::DebugMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__, \
-                         message)
-    #define Info(message)                                                                    \
-        Log::Logger::log(Log::messageType::InfoMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__, \
-                         message)
-    #define Warning(message)                                                                    \
-        Log::Logger::log(Log::messageType::WarningMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__, \
-                         message)
-    #define Error(message)                                                                    \
-        Log::Logger::log(Log::messageType::ErrorMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__, \
-                         message)
-    #define Fatal(message)                                                                    \
-        Log::Logger::log(Log::messageType::FatalMsg, __FILE__, __PRETTY_FUNCTION__, __LINE__, \
-                         message)
-
+    #define LOG_CURRENT_FUNC __PRETTY_FUNCTION__
 #elif _MSC_VER && !__INTEL_COMPILER
-    #define Debug(message) \
-        Log::Logger::log(Log::messageType::DebugMsg, __FILE__, __FUNCSIG__, __LINE__, message)
-    #define Info(message) \
-        Log::Logger::log(Log::messageType::InfoMsg, __FILE__, __FUNCSIG__, __LINE__, message)
-    #define Warning(message) \
-        Log::Logger::log(Log::messageType::WarningMsg, __FILE__, __FUNCSIG__, __LINE__, message)
-    #define Error(message) \
-        Log::Logger::log(Log::messageType::ErrorMsg, __FILE__, __FUNCSIG__, __LINE__, message)
-    #define Fatal(message) \
-        Log::Logger::log(Log::messageType::FatalMsg, __FILE__, __FUNCSIG__, __LINE__, message)
-
+    #define LOG_CURRENT_FUNC __FUNCSIG__
 #elif
-    #define Debug(message) \
-        Log::Logger::log(Log::messageType::DebugMsg, __FILE__, __func__, __LINE__, message)
-    #define Info(message) \
-        Log::Logger::log(Log::messageType::InfoMsg, __FILE__, __func__, __LINE__, message)
-    #define Warning(message) \
-        Log::Logger::log(Log::messageType::WarningMsg, __FILE__, __func__, __LINE__, message)
-    #define Error(message) \
-        Log::Logger::log(Log::messageType::ErrorMsg, __FILE__, __func__, __LINE__, message)
-    #define Fatal(message) \
-        Log::Logger::log(Log::messageType::FatalMsg, __FILE__, __func__, __LINE__, message)
-
+    #define LOG_CURRENT_FUNC __func__
 #endif
+
+#define Debug(message) \
+    Log::Logger::log(Log::messageType::DebugMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, message)
+#define Info(message) \
+    Log::Logger::log(Log::messageType::InfoMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, message)
+#define Warning(message) \
+    Log::Logger::log(Log::messageType::WarningMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, message)
+#define Error(message) \
+    Log::Logger::log(Log::messageType::ErrorMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, message)
+#define Fatal(message) \
+    Log::Logger::log(Log::messageType::FatalMsg, __FILE__, LOG_CURRENT_FUNC, __LINE__, message)
 
 namespace Log {
 
@@ -75,10 +51,7 @@ public:
 /**
  * @brief The Logger class
  *
- * Main logging class. In common case, it is useful to call the wrappers.
- * Used through macros Debug(), Info(), Warning(), Crirical(), Fatal(),
- * which are expanded to function wrappers @brief log_debug(__FILE__,
- * __PRETTY_FUNCTION__, __LINE__, message), etc.
+ * Main logging class.
  */
 class Logger {
 public:
