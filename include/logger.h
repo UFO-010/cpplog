@@ -1,8 +1,9 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <cstdio>
 #include <cstring>
+#include <charconv>
+#include <stdlib.h>
 
 #include "logger_config.h"
 
@@ -220,17 +221,17 @@ public:
         char temp[LOGGER_MAX_TEMP_SIZE];
         for (size_t i = 0; i < tokenOpsCount; i++) {
             append(pos, outBuf, bufSize, tokenOps[i].literal, tokenOps[i].literal_len);
-            const int handerPos = static_cast<const int>(tokenOps[i].type);
+            const int handerPos = static_cast<int>(tokenOps[i].type);
             tokHanlders[handerPos](pos, outBuf, bufSize, msgType, file, func, line, str, temp,
                                    LOGGER_MAX_TEMP_SIZE);
         }
 
-        if (pos < bufSize) {
-            outBuf[pos] = '\0';
-        } else if (bufSize != 0) {
-            outBuf[bufSize - 1] = '\0';
-            pos = bufSize - 1;
-        }
+        // if (pos < bufSize) {
+        outBuf[pos] = '\0';
+        // } else if (bufSize != 0) {
+        //     outBuf[bufSize - 1] = '\0';
+        //     pos = bufSize - 1;
+        // }
 
         return pos;
     }
@@ -278,21 +279,10 @@ private:
      */
     static void append(
         size_t &pos, char *outBuf, size_t bufSize, const char *data, size_t dataLen) {
-        size_t cur_pos = pos;
-        size_t cnt = 0;
-
-        if (cur_pos + dataLen < bufSize) {
-            cnt = dataLen;
-        } else if (bufSize > cur_pos) {
-            cnt = bufSize - cur_pos - 1;
-        } else {
-            cnt = 0;
+        if (pos + dataLen < bufSize) {
+            std::memcpy(outBuf + pos, data, dataLen);
+            pos += dataLen;
         }
-        if (cnt != 0) {
-            std::memcpy(outBuf + cur_pos, data, cnt);
-            cur_pos += cnt;
-        }
-        pos = cur_pos;
     }
 
     static void tokDateHandler(size_t &pos,
@@ -333,7 +323,7 @@ private:
                                 [[maybe_unused]] const char *str,
                                 [[maybe_unused]] char *temp,
                                 [[maybe_unused]] size_t temp_size) {
-        const char *ch = msg_log_types[static_cast<const int>(msgType)];
+        const char *ch = msg_log_types[static_cast<int>(msgType)];
         append(pos, outBuf, bufSize, ch, std::strlen(ch));
     }
 
@@ -388,8 +378,8 @@ private:
                                [[maybe_unused]] char *temp,
                                [[maybe_unused]] size_t temp_size) {
         char numbuf[LOGGER_MAX_NUMBUF_SIZE];
-        int n = std::snprintf(numbuf, sizeof(numbuf), "%d", line);
-        append(pos, outBuf, bufSize, numbuf, static_cast<size_t>(n));
+        std::to_chars_result result = std::to_chars(numbuf, numbuf + sizeof(numbuf), line);
+        append(pos, outBuf, bufSize, numbuf, static_cast<size_t>(result.ptr - numbuf));
     }
 
     static void tokPidHandler(size_t &pos,

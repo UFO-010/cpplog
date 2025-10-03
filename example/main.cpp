@@ -34,7 +34,7 @@ void thread_func2() {
 }
 
 int main() {
-    Log::Logger::setLogLevel(4);
+    Log::Logger::setLogLevel(Log::DebugMsg);
     DefaultDataProvider defaultDataProvider;
     Log::Logger::setDataProvider(&defaultDataProvider);
 

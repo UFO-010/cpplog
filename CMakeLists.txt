@@ -9,10 +9,8 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
 add_library(${PROJECT_NAME}_compiler_flags INTERFACE)
 target_compile_features(${PROJECT_NAME}_compiler_flags INTERFACE cxx_std_17)
-
 
 add_library(logger STATIC
   "${CMAKE_CURRENT_LIST_DIR}/src/logger.cpp"
@@ -27,7 +25,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     "${CMAKE_CURRENT_LIST_DIR}/src/"
     "${CMAKE_CURRENT_LIST_DIR}/include/"
 )
-
 
 target_compile_options(${PROJECT_NAME} PRIVATE
     -ffunction-sections
