@@ -369,7 +369,7 @@ private:
 
     static void tokLineHandler(size_t &pos,
                                char *outBuf,
-                               size_t bufSize,
+                               [[maybe_unused]] size_t bufSize,
                                [[maybe_unused]] const Log::messageType msgType,
                                [[maybe_unused]] const char *file,
                                [[maybe_unused]] const char *func,
@@ -377,9 +377,9 @@ private:
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] char *temp,
                                [[maybe_unused]] size_t temp_size) {
-        char numbuf[LOGGER_MAX_NUMBUF_SIZE];
-        std::to_chars_result result = std::to_chars(numbuf, numbuf + sizeof(numbuf), line);
-        append(pos, outBuf, bufSize, numbuf, static_cast<size_t>(result.ptr - numbuf));
+        char *tail = outBuf + pos;
+        std::to_chars_result result = std::to_chars(tail, tail + (bufSize - pos), line);
+        pos += result.ptr - tail;
     }
 
     static void tokPidHandler(size_t &pos,
