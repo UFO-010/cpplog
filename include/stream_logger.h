@@ -50,11 +50,7 @@ public:
         st.str().reserve(128);
     }
 
-    ~MsgSender() {
-        if (Logger::getLevel() >= message_type) {
-            Logger::log(message_type, file, function, line, st.str().c_str());
-        }
-    }
+    ~MsgSender() { Logger::log(message_type, file, function, line, st.str().c_str()); }
 
     MsgSender &operator<<(char str) {
         st << str;

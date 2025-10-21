@@ -18,19 +18,19 @@
     #define localtime_r(T, Tm) (localtime_s(Tm, T) ? nullptr : Tm)
 #endif
 
-class DefaultDataProvider : public Log::DataProvider {
+class DefaultDataProvider {
 public:
     DefaultDataProvider() { getCurrentProcessName(current_process, proc_len); }
 
     ~DefaultDataProvider() {}
 
-    const char *getProcessName(char *buffer, size_t bufferSize) const override {
+    const char *getProcessName(char *buffer, size_t bufferSize) const {
         size_t size = proc_len > bufferSize ? bufferSize : proc_len;
         std::memcpy(buffer, current_process, size);
         return buffer;
     }
 
-    const char *getThreadId(char *buffer, size_t bufferSize) const override {
+    const char *getThreadId(char *buffer, size_t bufferSize) const {
 #if defined(__linux__)
         pid_t tid = static_cast<pid_t>(syscall(SYS_gettid));
         std::snprintf(buffer, bufferSize, "%d", tid);
@@ -46,7 +46,7 @@ public:
 #endif
     }
 
-    const char *getCurrentDate(char *buffer, size_t bufferSize) const override {
+    const char *getCurrentDate(char *buffer, size_t bufferSize) const {
         time_t timestamp = 0;
         time(&timestamp);
         struct tm datetime = {};
@@ -58,7 +58,7 @@ public:
         return nullptr;
     }
 
-    const char *getCurrentTime(char *buffer, size_t bufferSize) const override {
+    const char *getCurrentTime(char *buffer, size_t bufferSize) const {
         time_t timestamp = 0;
         time(&timestamp);
         struct tm datetime = {};

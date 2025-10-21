@@ -1,9 +1,9 @@
 #include <benchmark/benchmark.h>
 #include "logger.h"
 
-class NullSink : public Log::ILogSink {
+class NullSink : public Log::ILogSink<NullSink> {
 public:
-    void send(const Log::messageType &msgType, const char *data, size_t size) override {}
+    void send(const Log::messageType &msgType, const char *data, size_t size) const {}
 };
 
 class EmptyProvider {
@@ -17,22 +17,19 @@ public:
     const char *getCurrentTime(char *buffer, size_t bufferSize) const { return buffer; }
 };
 
-EmptyProvider emptyProvider;
-Log::Logger<EmptyProvider> my_logger(emptyProvider);
+const EmptyProvider emptyProvider;
+const NullSink nullSink;
+Log::Logger<EmptyProvider, NullSink> my_logger(emptyProvider, nullSink);
+char buffer[LOGGER_MAX_STR_SIZE];
 
 static void LoggerSetup() {
     my_logger.setLogLevel(Log::DebugMsg);
-    static EmptyProvider mockProvider;
-    static NullSink nullSink;
-    // Log::Logger::setDataProvider(&mockProvider);
-    my_logger.addSink(&nullSink);
     my_logger.setLogPattern(
         "%{type} %{date} %{time} %{pid} file %{file} "
         "function %{function} line %{line} %{message}");
 }
 
 static void BM_CreateMessage(benchmark::State &state) {
-    char buffer[LOGGER_MAX_STR_SIZE];
     for (auto _ : state) {
         my_logger.createMessage(Log::DebugMsg, "main.cpp", "main", 18, "test", buffer,
                                 sizeof(buffer));
@@ -42,7 +39,6 @@ static void BM_CreateMessage(benchmark::State &state) {
 BENCHMARK(BM_CreateMessage);
 
 static void BM_Stdprint(benchmark::State &state) {
-    char buffer[LOGGER_MAX_STR_SIZE];
     for (auto _ : state) {
         std::snprintf(buffer, sizeof(buffer), "%d file %s function %s line %d %s", Log::DebugMsg,
                       "main.cpp", "main", 18, "test");
@@ -50,6 +46,14 @@ static void BM_Stdprint(benchmark::State &state) {
 }
 
 BENCHMARK(BM_Stdprint);
+
+static void BM_logging(benchmark::State &state) {
+    for (auto _ : state) {
+        Debug(my_logger, "");
+    }
+}
+
+BENCHMARK(BM_logging);
 
 int main(int argc, char *argv[]) {
     LoggerSetup();

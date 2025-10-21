@@ -13,11 +13,11 @@ enum class ansi_cols {
     RESET_COLOR = 5
 };
 
-class ConsoleSink : public Log::ILogSink {
+class ConsoleSink : public Log::ILogSink<ConsoleSink> {
 public:
     ConsoleSink() {}
 
-    void send(const Log::messageType &msgType, const char *data, size_t size) override {
+    void send(const Log::messageType &msgType, const char *data, size_t size) {
         if (ansi_cols_support && colors_enabled) {
             std::string colorized_msg;
             int reset_pos = static_cast<int>(ansi_cols::RESET_COLOR);
