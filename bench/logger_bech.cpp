@@ -6,33 +6,36 @@ public:
     void send(const Log::messageType &msgType, const char *data, size_t size) override {}
 };
 
-class EmptyProvider : public Log::DataProvider {
-    const char *getProcessName(char *buffer, size_t bufferSize) const override { return buffer; }
+class EmptyProvider {
+public:
+    const char *getProcessName(char *buffer, size_t bufferSize) const { return buffer; }
 
-    const char *getThreadId(char *buffer, size_t bufferSize) const override { return buffer; }
+    const char *getThreadId(char *buffer, size_t bufferSize) const { return buffer; }
 
-    const char *getCurrentDate(char *buffer, size_t bufferSize) const override { return buffer; }
+    const char *getCurrentDate(char *buffer, size_t bufferSize) const { return buffer; }
 
-    const char *getCurrentTime(char *buffer, size_t bufferSize) const override { return buffer; }
+    const char *getCurrentTime(char *buffer, size_t bufferSize) const { return buffer; }
 };
 
+EmptyProvider emptyProvider;
+Log::Logger<EmptyProvider> my_logger(emptyProvider);
+
 static void LoggerSetup() {
-    Log::Logger::setLogLevel(Log::DebugMsg);
+    my_logger.setLogLevel(Log::DebugMsg);
     static EmptyProvider mockProvider;
     static NullSink nullSink;
-    Log::Logger::setDataProvider(&mockProvider);
-    Log::Logger::addSink(&nullSink);
-    Log::Logger::setLogPattern(
+    // Log::Logger::setDataProvider(&mockProvider);
+    my_logger.addSink(&nullSink);
+    my_logger.setLogPattern(
         "%{type} %{date} %{time} %{pid} file %{file} "
         "function %{function} line %{line} %{message}");
 }
 
 static void BM_CreateMessage(benchmark::State &state) {
-    LoggerSetup();
     char buffer[LOGGER_MAX_STR_SIZE];
     for (auto _ : state) {
-        Log::Logger::createMessage(Log::DebugMsg, "main.cpp", "main", 18, "test", buffer,
-                                   sizeof(buffer));
+        my_logger.createMessage(Log::DebugMsg, "main.cpp", "main", 18, "test", buffer,
+                                sizeof(buffer));
     }
 }
 
@@ -49,6 +52,7 @@ static void BM_Stdprint(benchmark::State &state) {
 BENCHMARK(BM_Stdprint);
 
 int main(int argc, char *argv[]) {
+    LoggerSetup();
     ::benchmark::Initialize(&argc, argv);
     if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
 
