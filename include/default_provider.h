@@ -1,7 +1,6 @@
 #ifndef DEFAULTPROVIDER_H
 #define DEFAULTPROVIDER_H
 
-#include "logger.h"
 #include <cstring>
 #include <ctime>
 #include <fstream>
@@ -24,55 +23,55 @@ public:
 
     ~DefaultDataProvider() {}
 
-    const char *getProcessName(char *buffer, size_t bufferSize) const {
-        size_t size = proc_len > bufferSize ? bufferSize : proc_len;
+    size_t getProcessName(char *buffer, size_t bufferSize) const {
+        size_t size = std::strlen(current_process);
         std::memcpy(buffer, current_process, size);
-        return buffer;
+        return size;
     }
 
-    const char *getThreadId(char *buffer, size_t bufferSize) const {
+    size_t getThreadId(char *buffer, size_t bufferSize) const {
 #if defined(__linux__)
         pid_t tid = static_cast<pid_t>(syscall(SYS_gettid));
-        std::snprintf(buffer, bufferSize, "%d", tid);
-        return buffer;
+        int len = std::snprintf(buffer, bufferSize, "%d", tid);
+        return len;
 #elif defined(_WIN32)
         DWORD tid = GetCurrentThreadId();
-        std::snprintf(buffer, bufferSize, "%lu", static_cast<unsigned long>(tid));
-        return buffer;
+        int len = std::snprintf(buffer, bufferSize, "%lu", static_cast<unsigned long>(tid));
+        return len;
 #else
         std::strncpy(buffer, "unknown", bufferSize - 1);
-        buffer[bufferSize - 1] = '\0';
-        return buffer;
+        buffer[sizeof("unknown") - 1] = '\0';
+        return sizeof("unknown");
 #endif
     }
 
-    const char *getCurrentDate(char *buffer, size_t bufferSize) const {
+    size_t getCurrentDate(char *buffer, size_t bufferSize) const {
         time_t timestamp = 0;
         time(&timestamp);
         struct tm datetime = {};
 
         if (localtime_r(&timestamp, &datetime) != nullptr) {
-            std::strftime(buffer, bufferSize, "%d.%m.%Y", &datetime);
-            return buffer;
+            size_t len = std::strftime(buffer, bufferSize, "%d.%m.%Y", &datetime);
+            return len;
         }
-        return nullptr;
+        return 0;
     }
 
-    const char *getCurrentTime(char *buffer, size_t bufferSize) const {
+    size_t getCurrentTime(char *buffer, size_t bufferSize) const {
         time_t timestamp = 0;
         time(&timestamp);
         struct tm datetime = {};
 
         if (localtime_r(&timestamp, &datetime) != nullptr) {
-            std::strftime(buffer, bufferSize, "%H:%M:%S", &datetime);
-            return buffer;
+            size_t len = std::strftime(buffer, bufferSize, "%H:%M:%S", &datetime);
+            return len;
         }
-        return nullptr;
+        return 0;
     }
 
 private:
 #if defined(__linux__)
-    const char *getCurrentProcessName(char *buffer, size_t bufferSize) {
+    size_t getCurrentProcessName(char *buffer, size_t bufferSize) {
         std::ifstream file("/proc/self/comm");
         if (file) {
             file.getline(buffer, bufferSize);
@@ -80,14 +79,14 @@ private:
             if (len > 0 && buffer[len - 1] == '\n') {
                 buffer[len - 1] = '\0';
             }
-            return buffer;
+            return len;
         } else {
             std::snprintf(buffer, bufferSize, "%d", static_cast<int>(getpid()));
-            return buffer;
+            return std::strlen(buffer);
         }
     }
 #elif defined(_WIN32)
-    const char *getCurrentProcess(char *buffer, size_t bufferSize) {
+    size_t getCurrentProcess(char *buffer, size_t bufferSize) {
         DWORD pid = GetCurrentProcessId();
         HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
         if (hProcess != NULL) {
@@ -105,11 +104,11 @@ private:
             CloseHandle(hProcess);
         }
 
-        std::snprintf(buffer, bufferSize, "%lu", static_cast<unsigned long>(pid));
-        return buffer;
+        size_t len = std::snprintf(buffer, bufferSize, "%lu", static_cast<unsigned long>(pid));
+        return len;
     }
 #else
-    const char *getCurrentProcess(char *buffer, size_t bufferSize) { buffer[0] = '\0'; }
+    const size_t getCurrentProcess(char *buffer, size_t bufferSize) { buffer[0] = '\0'; }
 #endif
     static const size_t proc_len = 64;
     char current_process[proc_len] = {};

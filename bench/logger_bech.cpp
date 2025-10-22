@@ -8,13 +8,13 @@ public:
 
 class EmptyProvider {
 public:
-    const char *getProcessName(char *buffer, size_t bufferSize) const { return buffer; }
+    size_t getProcessName(char *buffer, size_t bufferSize) const { return 0; }
 
-    const char *getThreadId(char *buffer, size_t bufferSize) const { return buffer; }
+    size_t getThreadId(char *buffer, size_t bufferSize) const { return 0; }
 
-    const char *getCurrentDate(char *buffer, size_t bufferSize) const { return buffer; }
+    size_t getCurrentDate(char *buffer, size_t bufferSize) const { return 0; }
 
-    const char *getCurrentTime(char *buffer, size_t bufferSize) const { return buffer; }
+    size_t getCurrentTime(char *buffer, size_t bufferSize) const { return 0; }
 };
 
 const EmptyProvider emptyProvider;
@@ -31,8 +31,8 @@ static void LoggerSetup() {
 
 static void BM_CreateMessage(benchmark::State &state) {
     for (auto _ : state) {
-        my_logger.createMessage(Log::DebugMsg, "main.cpp", "main", 18, "test", buffer,
-                                sizeof(buffer));
+        my_logger.createMessage(Log::DebugMsg, "main.cpp", sizeof("main.cpp"), "main",
+                                sizeof("main"), 18, "test", buffer, sizeof(buffer));
     }
 }
 

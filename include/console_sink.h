@@ -17,7 +17,7 @@ class ConsoleSink : public Log::ILogSink<ConsoleSink> {
 public:
     ConsoleSink() {}
 
-    void send(const Log::messageType &msgType, const char *data, size_t size) {
+    void send(const Log::messageType &msgType, const char *data, size_t size) const {
         if (ansi_cols_support && colors_enabled) {
             std::string colorized_msg;
             int reset_pos = static_cast<int>(ansi_cols::RESET_COLOR);
@@ -33,7 +33,7 @@ public:
         std::cout << data;
     }
 
-    void colorize(bool col) {
+    void colorize(bool col) const {
 #if defined(_WIN32)
         if (!setWinConsoleAnsiCols(std::cout.rdbuf())) {
             ansi_cols_support = false;
@@ -93,8 +93,8 @@ private:
         "\033[97m",  // white DEBUG_COLOR
         "\033[0m",   // reset RESET_COLOR
     };
-    bool colors_enabled = false;
-    bool ansi_cols_support = true;
+    mutable bool colors_enabled = true;
+    mutable bool ansi_cols_support = true;
 };
 
 #endif

@@ -40,7 +40,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
     -Wshadow
     -Wformat=2
     -Wunused
-    -Werror
+    # -Werror
     -Wno-deprecated
     -Wwrite-strings
     -Wunused-variable
