@@ -7,6 +7,8 @@
 constexpr int LOGGER_MAX_SINKS = 4;
 /// Maximum length of output string
 constexpr size_t LOGGER_MAX_STR_SIZE = 512;
+/// Maximum length of logger input message
+constexpr size_t LOGGER_MAX_MESSAGE_SIZE = 256;
 /// Maximum length of string to place time and data
 constexpr size_t LOGGER_MAX_TEMP_SIZE = 32;
 /// Maximum length of string to place numbers

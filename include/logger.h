@@ -404,7 +404,7 @@ private:
                                   [[maybe_unused]] int line,
                                   [[maybe_unused]] const char *str,
                                   [[maybe_unused]] const TDataProvider &data_provider_instance) {
-        size_t len = std::strlen(str);
+        size_t len = strnlen(str, LOGGER_MAX_MESSAGE_SIZE);
         append(pos, outBuf, bufSize, str, len);
     }
 
