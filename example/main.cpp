@@ -37,4 +37,6 @@ int main() {
     std::thread thread2 = std::thread(&thread_func2);
     thread1.join();
     thread2.join();
+
+    return 0;
 }

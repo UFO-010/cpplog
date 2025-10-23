@@ -3,8 +3,8 @@
 
 #include <cstring>
 #include <charconv>
-#include <stdlib.h>
 #include <tuple>
+#include <iterator>
 
 #include "logger_config.h"
 
@@ -68,7 +68,7 @@ public:
 template <typename TDataProvider, typename... TSinkTypes>
 class Logger {
 public:
-    Logger(const TDataProvider &provider = TDataProvider{}, TSinkTypes... sink_args)
+    explicit Logger(const TDataProvider &provider = TDataProvider{}, TSinkTypes... sink_args)
         : data_provider_instance(provider),
           sinks_tuple(sink_args...) {
         setLogPattern("%{type}: %{message}");  // default pattern
@@ -81,7 +81,7 @@ public:
      */
     void setLogLevel(int level) { logLevel = level; }
 
-    int getLevel() { return logLevel; }
+    int getLevel() const { return logLevel; }
 
     /**
      * @brief setLogPattern
@@ -114,7 +114,7 @@ public:
 
             const char *token_start = p;
             const char *brace_end = strchr(p + 2, '}');
-            if (brace_end == NULL) {
+            if (brace_end == nullptr) {
                 break;
             }
 
@@ -192,14 +192,15 @@ public:
         size_t msg_size =
             createMessage(msgType, file, file_len, func, func_len, line, str, msg, sizeof(msg));
 
-#if ENABLE_SINKS == 1
-        send_to_all_sinks(msgType, msg, msg_size);
-#endif
-#if ENABLE_PRINT_CALLBACK == 1
-        if (userHandler != nullptr) {
-            userHandler(msgType, msg, msg_size);
+        if constexpr (ENABLE_SINKS) {
+            send_to_all_sinks(msgType, msg, msg_size);
         }
-#endif
+
+        if constexpr (ENABLE_PRINT_CALLBACK) {
+            if (userHandler != nullptr) {
+                userHandler(msgType, msg, msg_size);
+            }
+        }
     }
 
     /**
@@ -287,9 +288,9 @@ private:
                                size_t bufSize,
                                [[maybe_unused]] const Log::messageType msgType,
                                [[maybe_unused]] const char *file,
-                               size_t file_len,
+                               [[maybe_unused]] size_t file_len,
                                [[maybe_unused]] const char *func,
-                               size_t func_len,
+                               [[maybe_unused]] size_t func_len,
                                [[maybe_unused]] int line,
                                [[maybe_unused]] const char *str,
                                const TDataProvider &data_provider_instance) {
@@ -303,9 +304,9 @@ private:
                                size_t bufSize,
                                [[maybe_unused]] const Log::messageType msgType,
                                [[maybe_unused]] const char *file,
-                               size_t file_len,
+                               [[maybe_unused]] size_t file_len,
                                [[maybe_unused]] const char *func,
-                               size_t func_len,
+                               [[maybe_unused]] size_t func_len,
                                [[maybe_unused]] int line,
                                [[maybe_unused]] const char *str,
                                const TDataProvider &data_provider_instance) {
@@ -319,9 +320,9 @@ private:
                                  size_t bufSize,
                                  [[maybe_unused]] const Log::messageType msgType,
                                  [[maybe_unused]] const char *file,
-                                 size_t file_len,
+                                 [[maybe_unused]] size_t file_len,
                                  [[maybe_unused]] const char *func,
-                                 size_t func_len,
+                                 [[maybe_unused]] size_t func_len,
                                  [[maybe_unused]] int line,
                                  [[maybe_unused]] const char *str,
                                  const TDataProvider &data_provider_instance) {
@@ -335,9 +336,9 @@ private:
                               size_t bufSize,
                               [[maybe_unused]] const Log::messageType msgType,
                               [[maybe_unused]] const char *file,
-                              size_t file_len,
+                              [[maybe_unused]] size_t file_len,
                               [[maybe_unused]] const char *func,
-                              size_t func_len,
+                              [[maybe_unused]] size_t func_len,
                               [[maybe_unused]] int line,
                               [[maybe_unused]] const char *str,
                               const TDataProvider &data_provider_instance) {
@@ -349,11 +350,11 @@ private:
     static void tokLevelHandler(size_t &pos,
                                 char *outBuf,
                                 size_t bufSize,
-                                [[maybe_unused]] const Log::messageType msgType,
+                                const Log::messageType msgType,
                                 [[maybe_unused]] const char *file,
-                                size_t file_len,
+                                [[maybe_unused]] size_t file_len,
                                 [[maybe_unused]] const char *func,
-                                size_t func_len,
+                                [[maybe_unused]] size_t func_len,
                                 [[maybe_unused]] int line,
                                 [[maybe_unused]] const char *str,
                                 [[maybe_unused]] const TDataProvider &data_provider_instance) {
@@ -367,10 +368,10 @@ private:
                                char *outBuf,
                                size_t bufSize,
                                [[maybe_unused]] const Log::messageType msgType,
-                               [[maybe_unused]] const char *file,
+                               const char *file,
                                size_t file_len,
                                [[maybe_unused]] const char *func,
-                               size_t func_len,
+                               [[maybe_unused]] size_t func_len,
                                [[maybe_unused]] int line,
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] const TDataProvider &data_provider_instance) {
@@ -382,8 +383,8 @@ private:
                                size_t bufSize,
                                [[maybe_unused]] const Log::messageType msgType,
                                [[maybe_unused]] const char *file,
-                               size_t file_len,
-                               [[maybe_unused]] const char *func,
+                               [[maybe_unused]] size_t file_len,
+                               const char *func,
                                size_t func_len,
                                [[maybe_unused]] int line,
                                [[maybe_unused]] const char *str,
@@ -396,9 +397,9 @@ private:
                                [[maybe_unused]] size_t bufSize,
                                [[maybe_unused]] const Log::messageType msgType,
                                [[maybe_unused]] const char *file,
-                               size_t file_len,
+                               [[maybe_unused]] size_t file_len,
                                [[maybe_unused]] const char *func,
-                               size_t func_len,
+                               [[maybe_unused]] size_t func_len,
                                [[maybe_unused]] int line,
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] const TDataProvider &data_provider_instance) {
@@ -412,9 +413,9 @@ private:
                                   size_t bufSize,
                                   [[maybe_unused]] const Log::messageType msgType,
                                   [[maybe_unused]] const char *file,
-                                  size_t file_len,
+                                  [[maybe_unused]] size_t file_len,
                                   [[maybe_unused]] const char *func,
-                                  size_t func_len,
+                                  [[maybe_unused]] size_t func_len,
                                   [[maybe_unused]] int line,
                                   [[maybe_unused]] const char *str,
                                   [[maybe_unused]] const TDataProvider &data_provider_instance) {
@@ -427,9 +428,9 @@ private:
                                   [[maybe_unused]] size_t bufSize,
                                   [[maybe_unused]] const Log::messageType msgType,
                                   [[maybe_unused]] const char *file,
-                                  size_t file_len,
+                                  [[maybe_unused]] size_t file_len,
                                   [[maybe_unused]] const char *func,
-                                  size_t func_len,
+                                  [[maybe_unused]] size_t func_len,
                                   [[maybe_unused]] int line,
                                   [[maybe_unused]] const char *str,
                                   [[maybe_unused]] const TDataProvider &data_provider_instance) {
@@ -460,7 +461,11 @@ private:
      */
     template <std::size_t I = 0>
     inline typename std::enable_if<I == sizeof...(TSinkTypes), void>::type send_to_all_sinks(
-        const messageType &msgType, const char *data, size_t size) const {}
+        [[maybe_unused]] const messageType &msgType,
+        [[maybe_unused]] const char *data,
+        [[maybe_unused]] size_t size) const {
+        // no sinks left, do nothing
+    }
 
     /**
      * @brief send_to_all_sinks
@@ -511,7 +516,8 @@ private:
     static constexpr const char *tokens[] = {"%{date}", "%{time}",   "%{type}",
                                              "%{file}", "%{thread}", "%{function}",
                                              "%{line}", "%{pid}",    "%{message}"};
-    static constexpr size_t tokensNumber = sizeof(tokens) / sizeof(tokens[0]);
+    // static constexpr size_t tokensNumber = sizeof(tokens) / sizeof(tokens[0]);
+    static constexpr size_t tokensNumber = std::size(tokens);
 };
 
 }  // namespace Log

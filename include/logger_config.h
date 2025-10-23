@@ -16,17 +16,12 @@ constexpr size_t LOGGER_MAX_TOKENS = 9;
 /// Maximum length of token to search in log message pattern
 constexpr size_t LOGGER_LITERAL_BUFFER_SIZE = 64;
 
-#ifndef ENABLE_PRINT_CALLBACK
-    #define ENABLE_PRINT_CALLBACK 0  // user callbacks disabled by default
-#endif
+/// Enables callbacks to print log messages during compile time
+constexpr bool ENABLE_PRINT_CALLBACK = false;  // callback disabled by default
+/// Enables sinks to print log messages during compile time
+constexpr bool ENABLE_SINKS = true;  // sinks enabled by default
 
-#ifndef ENABLE_SINKS
-    #define ENABLE_SINKS 1  // user sinks enabled by default
-#endif
-
-#ifndef LOGGER_MAX_LEVEL
-    #define LOGGER_MAX_LEVEL 4  // Debug by default
-#endif
+constexpr int LOGGER_MAX_LEVEL = 4;  // Debug by default
 
 /// Macros to check logging level during preprocess. Silences logging levels even if setup level in
 /// code is another. Printing log via direct call of log function still can be performed.

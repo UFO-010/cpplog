@@ -4,7 +4,6 @@ project(logger_example LANGUAGES C CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake/")
-include(Sanitize)
 
 
 set(CMAKE_CXX_STANDARD 17)

@@ -19,13 +19,16 @@
 
 class DefaultDataProvider {
 public:
-    DefaultDataProvider() { getCurrentProcessName(current_process, proc_len); }
+    DefaultDataProvider() { getCurrentProcessName(); }
 
-    ~DefaultDataProvider() {}
+    ~DefaultDataProvider() = default;
 
     size_t getProcessName(char *buffer, size_t bufferSize) const {
-        size_t size = std::strlen(current_process);
-        std::memcpy(buffer, current_process, size);
+        size_t size = current_process.size();
+        if (size >= bufferSize) {
+            return 0;
+        }
+        std::memcpy(buffer, current_process.data(), size);
         return size;
     }
 
@@ -33,7 +36,7 @@ public:
 #if defined(__linux__)
         pid_t tid = static_cast<pid_t>(syscall(SYS_gettid));
         int len = std::snprintf(buffer, bufferSize, "%d", tid);
-        return len;
+        return static_cast<size_t>(len);
 #elif defined(_WIN32)
         DWORD tid = GetCurrentThreadId();
         int len = std::snprintf(buffer, bufferSize, "%lu", static_cast<unsigned long>(tid));
@@ -71,18 +74,15 @@ public:
 
 private:
 #if defined(__linux__)
-    size_t getCurrentProcessName(char *buffer, size_t bufferSize) {
+    size_t getCurrentProcessName() {
         std::ifstream file("/proc/self/comm");
-        if (file) {
-            file.getline(buffer, bufferSize);
-            size_t len = std::strlen(buffer);
-            if (len > 0 && buffer[len - 1] == '\n') {
-                buffer[len - 1] = '\0';
-            }
-            return len;
+        if (file.is_open()) {
+            std::getline(file, current_process);
+            file.close();
+            return current_process.size();
         } else {
-            std::snprintf(buffer, bufferSize, "%d", static_cast<int>(getpid()));
-            return std::strlen(buffer);
+            current_process.append(std::to_string(getpid()));
+            return current_process.size();
         }
     }
 #elif defined(_WIN32)
@@ -104,14 +104,15 @@ private:
             CloseHandle(hProcess);
         }
 
-        size_t len = std::snprintf(buffer, bufferSize, "%lu", static_cast<unsigned long>(pid));
-        return len;
+        int len = std::snprintf(buffer, bufferSize, "%lu", static_cast<unsigned long>(pid));
+        return static_cast<size_t>(len);
     }
 #else
     const size_t getCurrentProcess(char *buffer, size_t bufferSize) { buffer[0] = '\0'; }
 #endif
     static const size_t proc_len = 64;
-    char current_process[proc_len] = {};
+    // char current_process[proc_len] = {};
+    std::string current_process;
 };
 
 #if defined(_WIN32)

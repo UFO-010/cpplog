@@ -15,7 +15,7 @@ enum class ansi_cols {
 
 class ConsoleSink : public Log::ILogSink<ConsoleSink> {
 public:
-    ConsoleSink() {}
+    ConsoleSink() = default;
 
     void send(const Log::messageType &msgType, const char *data, size_t size) const {
         if (ansi_cols_support && colors_enabled) {

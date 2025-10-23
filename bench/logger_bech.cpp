@@ -3,6 +3,7 @@
 
 class NullSink : public Log::ILogSink<NullSink> {
 public:
+    // do nothing
     void send(const Log::messageType &msgType, const char *data, size_t size) const {}
 };
 
@@ -24,9 +25,7 @@ char buffer[LOGGER_MAX_STR_SIZE];
 
 static void LoggerSetup() {
     my_logger.setLogLevel(Log::DebugMsg);
-    my_logger.setLogPattern(
-        "%{type} %{date} %{time} %{pid} file %{file} "
-        "function %{function} line %{line} %{message}");
+    my_logger.setLogPattern("%{type} file %{file} function %{function} line %{line} %{message}");
 }
 
 static void BM_CreateMessage(benchmark::State &state) {
@@ -62,6 +61,6 @@ int main(int argc, char *argv[]) {
 
     ::benchmark::RunSpecifiedBenchmarks();
     ::benchmark::Shutdown();
-    return 0;
+
     return 0;
 }
