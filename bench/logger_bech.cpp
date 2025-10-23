@@ -3,8 +3,9 @@
 
 class NullSink : public Log::ILogSink<NullSink> {
 public:
-    // do nothing
-    void send(const Log::messageType &msgType, const char *data, size_t size) const {}
+    void send(const Log::messageType &msgType, const char *data, size_t size) const {
+        // do nothing
+    }
 };
 
 class EmptyProvider {

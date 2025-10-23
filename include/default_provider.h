@@ -111,7 +111,6 @@ private:
     const size_t getCurrentProcess(char *buffer, size_t bufferSize) { buffer[0] = '\0'; }
 #endif
     static const size_t proc_len = 64;
-    // char current_process[proc_len] = {};
     std::string current_process;
 };
 

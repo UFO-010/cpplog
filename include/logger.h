@@ -148,16 +148,6 @@ public:
                 ++p;
             }
         }
-
-        // size_t tail_len = strlen(start_of_literal);
-        // if (literal_buffer_pos + tail_len > LOGGER_LITERAL_BUFFER_SIZE) {
-        //     tail_len = LOGGER_LITERAL_BUFFER_SIZE - literal_buffer_pos;
-        // }
-        // char *pattern_tail = literal_buffer + literal_buffer_pos;
-        // if (tail_len > 0) {
-        //     memcpy(const_cast<char *>(pattern_tail), start_of_literal, tail_len);
-        // }
-        // size_t pattern_tail_len = tail_len;
     }
 
     void setUserHandler(void (*_handler)(const messageType &msgType,
@@ -235,12 +225,7 @@ public:
                                    line, str, data_provider_instance);
         }
 
-        // if (pos < bufSize) {
         outBuf[pos] = '\0';
-        // } else if (bufSize != 0) {
-        //     outBuf[bufSize - 1] = '\0';
-        //     pos = bufSize - 1;
-        // }
 
         return pos;
     }

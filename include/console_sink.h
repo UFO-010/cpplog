@@ -4,7 +4,7 @@
 #include "logger.h"
 #include <iostream>
 
-enum class ansi_cols {
+enum class ansi_cols : int {
     DEBUG_COLOR = 0,
     INFO_COLOR = 1,
     WARNING_COLOR = 2,
