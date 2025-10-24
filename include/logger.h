@@ -100,7 +100,7 @@ public:
                     TSinkTypes... sink_args) noexcept
         : data_provider_instance(provider),
           sinks_tuple(sink_args...) {
-        setLogPattern("%{type}: %{message}");  // default pattern
+        setLogPattern("%{level}: %{message}");  // default pattern
     }
 
     Logger(const Logger &) = delete;
@@ -111,23 +111,27 @@ public:
     /**
      * @brief setLogLevel
      * @param level priority of messages to display
+     *
      * Set logging level. Messages with a lower priority level will be ignored
      */
     void setLogLevel(const level lev) { logLevel = static_cast<int>(lev); }
 
+    /**
+     * @brief getLevel
+     * @return minimum logging level
+     */
     int getLevel() const { return logLevel; }
 
     /**
      * @brief setLogPattern
      * @param pattern Output message pattern
+     *
      * Define ouput logging message format to look like.
-     * Options : "%{date}"; "%{time}"; "%{type}"; "%{file}"; "%{thread}";
+     * Options : "%{date}"; "%{time}"; "%{level}"; "%{file}"; "%{thread}";
      * "%{function}"; "%{line}"; "%{pid}"; "%{message}".
-     * Always put separators between options
      * @example "%{date} %{time}"
      * Output: "<current date> <current time>"
-     * @example "%{date}%{time}"
-     * Output: "<current date>%{time}"
+     * All text after the last token would be ignored.
      */
     bool setLogPattern(const char *pattern) {
         tokenOpsCount = 0;
@@ -195,14 +199,11 @@ public:
 
     /**
      * @brief log
-     * @param msgType type of message, see @brief messageType
-     * @param file name of file function called from
-     * @param func name of function this function called from
-     * @param line number of function this function called from
+     * @param record holds logging context
      * @param str input string to print in log message
      *
-     * Main logging function. Calls provided sinks and callbacks if enabled. Be careful, function
-     * itself don't control logging level.
+     * Main logging function. Calls provided sinks and callbacks if enabled in `logger_config.h`.
+     * All logging calls can be disabled in the same file.
      */
     void log(const LogRecord &record, const char *str) const {
         if (static_cast<int>(record.msgType) > logLevel) {
@@ -225,13 +226,11 @@ public:
 
     /**
      * @brief createMessage
-     * @param msgType type of message, see @brief messageType
-     * @param file name of file function called from
-     * @param func name of function this function called from
-     * @param line number of function this function called from
-     * @param str input string to print in log message
      * @param outBuf poitner to output buffer
-     * @param bufSize max size of buffer
+     * @param bufSize max size of output buffer
+     * @param record holds logging context
+     * @param str input string to print in log message
+     * @return length of formatted log message
      *
      * Creates log message with specified in @brief setMessagePattern
      * view and put it into `outBuf` and control it's size with `bufSize`.
@@ -273,10 +272,19 @@ private:
                                     const char *str,
                                     const TDataProvider &data_provider_instance);
 
+    /**
+     * @brief The TokenOp class
+     *
+     * Holds all tokens and their data found during parsing message pattern in `setLogPattern`
+     */
     struct TokenOp {
+        /// token type
         tokType type;
+        /// pointer to the text that comes before token
         const char *literal;
+        /// length of  text that comes before token
         size_t literal_len;
+        /// function pointer
         TokHandlerFunc handler;
     };
 
@@ -442,9 +450,10 @@ private:
     }
 
     int logLevel = 3;
-    /// holds messages that placed after tokens passed in  @brief setMessagePatter
+    /// holds all text before tokens found in `setLogPattern`. Token itself holds text that comes
+    /// before him, @see TokenOp
     char literalBuffer[LOGGER_LITERAL_BUFFER_SIZE] = {};
-    /// holds pointers to tokens, so the output will look the  same as @brief setMessagePattern
+    /// holds found tokens, so the output will look the same as `setLogPattern`
     TokenOp tokenOps[LOGGER_MAX_TOKENS] = {};
     /// holds number of found tokens
     size_t tokenOpsCount = 0;
@@ -496,11 +505,11 @@ private:
 
     /// types of logging level, added to output message
     static constexpr const char *msg_log_types[] = {"FATAL", "ERROR", "WARN", "INFO", "DEBUG"};
-    /// sizes of logging level string, hardcoded
+    /// sizes of logging level strings, hardcoded
     static constexpr size_t msg_log_type_lengths[] = {5, 5, 4, 4, 5};
 
     /// tokens for message pattern
-    static constexpr const char *tokens[] = {"%{date}", "%{time}",   "%{type}",
+    static constexpr const char *tokens[] = {"%{date}", "%{time}",   "%{level}",
                                              "%{file}", "%{thread}", "%{function}",
                                              "%{line}", "%{pid}",    "%{message}"};
     static constexpr size_t tokensNumber = std::size(tokens);

@@ -24,7 +24,7 @@ static void BM_CreateMessage(benchmark::State &state) {
     const NullSink nullSink;
     Log::Logger<EmptyProvider, NullSink> my_logger(emptyProvider, nullSink);
     my_logger.setLogLevel(Log::level::DebugMsg);
-    my_logger.setLogPattern("%{type} file %{file} function %{function} line %{line} %{message}");
+    my_logger.setLogPattern("%{level} file %{file} function %{function} line %{line} %{message}");
 
     std::string buf;
     buf.resize(LOGGER_MAX_STR_SIZE);
@@ -53,7 +53,7 @@ static void BM_logging(benchmark::State &state) {
     const NullSink nullSink;
     Log::Logger<EmptyProvider, NullSink> my_logger(emptyProvider, nullSink);
     my_logger.setLogLevel(Log::level::DebugMsg);
-    my_logger.setLogPattern("%{type} file %{file} function %{function} line %{line} %{message}");
+    my_logger.setLogPattern("%{level} file %{file} function %{function} line %{line} %{message}");
 
     for (auto _ : state) {
         Debug(my_logger, "test");

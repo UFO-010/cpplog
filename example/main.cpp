@@ -8,7 +8,7 @@
 void thread_func1(Log::Logger<DefaultDataProvider, ConsoleSink> &log) {
     for (int i = 0; i < 1000; i++) {
         Warning(log, "thread 1\n");  // simple log
-        Fatal(log, "thread 1\n");
+        Fatal(log, "thread 1\n");    // simple log
     }
 }
 
@@ -24,11 +24,11 @@ int main() {
     Log::Logger myLogger(defaultDataProvider, consoleSink);
 
     consoleSink.colorize(true);
-    myLogger.setLogLevel(Log::level::DebugMsg);
+    myLogger.setLogLevel(Log::level::DebugMsg);  // set minimum logging level
 
     //  set message pattern
     myLogger.setLogPattern(
-        "%{type}\t %{date} %{time} %{pid} file %{file} "
+        "%{level}\t %{date} %{time} %{pid} file %{file} "
         "function %{function} line %{line} %{message}");
 
     Error(myLogger, "aaa\n");  // simple log
