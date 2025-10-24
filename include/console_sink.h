@@ -3,6 +3,7 @@
 
 #include "logger.h"
 #include <iostream>
+#include <vector>
 
 enum class ansi_cols : int {
     DEBUG_COLOR = 0,
@@ -20,12 +21,13 @@ public:
     void send(const Log::messageType &msgType, const char *data, size_t size) const {
         if (ansi_cols_support && colors_enabled) {
             std::string colorized_msg;
-            int reset_pos = static_cast<int>(ansi_cols::RESET_COLOR);
+            size_t reset_pos = static_cast<size_t>(ansi_cols::RESET_COLOR);
 
-            colorized_msg.reserve((sizeof(msg_colors[reset_pos]) * 2) + size);
-            colorized_msg.append(msg_colors[static_cast<int>(msgType)]);
+            colorized_msg.reserve((msg_colors[reset_pos].size() * 2) + size);
+            colorized_msg.append(msg_colors[static_cast<size_t>(msgType)]);
             colorized_msg.append(data);
             colorized_msg.append(msg_colors[reset_pos]);
+
             std::cout << colorized_msg;
             return;
         }
@@ -85,7 +87,7 @@ private:
     }
 #endif
     /// terminal colors for logging message
-    inline static constexpr char msg_colors[6][6] = {
+    inline static std::vector<std::string> msg_colors = {
         "\033[35m",  // magenta FATAL_COLOR
         "\033[31m",  // red ERROR_COLOR
         "\033[33m",  // yellow WARNING_COLOR

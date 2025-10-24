@@ -3,20 +3,20 @@
 
 class NullSink : public Log::ILogSink<NullSink> {
 public:
-    void send(const Log::messageType &msgType, const char *data, size_t size) const {
+    void send(const Log::messageType &, const char *, size_t) const {
         // do nothing
     }
 };
 
 class EmptyProvider {
 public:
-    size_t getProcessName(char *buffer, size_t bufferSize) const { return 0; }
+    size_t getProcessName(char *, size_t) const { return 0; }
 
-    size_t getThreadId(char *buffer, size_t bufferSize) const { return 0; }
+    size_t getThreadId(char *, size_t) const { return 0; }
 
-    size_t getCurrentDate(char *buffer, size_t bufferSize) const { return 0; }
+    size_t getCurrentDate(char *, size_t) const { return 0; }
 
-    size_t getCurrentTime(char *buffer, size_t bufferSize) const { return 0; }
+    size_t getCurrentTime(char *, size_t) const { return 0; }
 };
 
 static void BM_CreateMessage(benchmark::State &state) {
@@ -26,12 +26,13 @@ static void BM_CreateMessage(benchmark::State &state) {
     my_logger.setLogLevel(Log::DebugMsg);
     my_logger.setLogPattern("%{type} file %{file} function %{function} line %{line} %{message}");
 
-    char buffer[LOGGER_MAX_STR_SIZE];
+    std::string buf;
+    buf.resize(LOGGER_MAX_STR_SIZE);
     constexpr Log::LogRecord l = {Log::DebugMsg, "main.cpp",     sizeof("main.cpp"),
                                   "main",        sizeof("main"), 18};
 
     for (auto _ : state) {
-        my_logger.createMessage(buffer, sizeof(buffer), l, "test");
+        my_logger.createMessage(buf.data(), buf.size(), l, "test");
     }
 }
 

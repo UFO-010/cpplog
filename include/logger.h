@@ -97,7 +97,8 @@ public:
 template <typename TDataProvider, typename... TSinkTypes>
 class Logger {
 public:
-    explicit Logger(const TDataProvider &provider = TDataProvider{}, TSinkTypes... sink_args)
+    explicit Logger(const TDataProvider &provider = TDataProvider{},
+                    TSinkTypes... sink_args) noexcept
         : data_provider_instance(provider),
           sinks_tuple(sink_args...) {
         setLogPattern("%{type}: %{message}");  // default pattern
@@ -147,7 +148,7 @@ public:
                 break;
             }
 
-            size_t literal_len = static_cast<size_t>(token_start - start_of_literal);
+            auto literal_len = static_cast<size_t>(token_start - start_of_literal);
 
             if (literal_buffer_pos + literal_len > LOGGER_LITERAL_BUFFER_SIZE) {
                 literal_len = LOGGER_LITERAL_BUFFER_SIZE - literal_buffer_pos;
@@ -159,7 +160,7 @@ public:
             }
             literal_buffer_pos += literal_len;
 
-            size_t token_len = static_cast<size_t>(brace_end + 1 - token_start);
+            auto token_len = static_cast<size_t>(brace_end + 1 - token_start);
             tokType found_type = tokType::TokInvalid;
             for (size_t i = 0; i < tokensNumber; ++i) {
                 if (strncmp(token_start, tokens[i], token_len) == 0) {
