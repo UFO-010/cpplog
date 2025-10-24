@@ -18,7 +18,7 @@ class ConsoleSink : public Log::ILogSink<ConsoleSink> {
 public:
     ConsoleSink() = default;
 
-    void send(const Log::messageType &msgType, const char *data, size_t size) const {
+    void send(const Log::level &msgType, const char *data, size_t size) const {
         if (ansi_cols_support && colors_enabled) {
             std::string colorized_msg;
             size_t reset_pos = static_cast<size_t>(ansi_cols::RESET_COLOR);
