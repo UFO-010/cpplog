@@ -29,10 +29,12 @@ static void LoggerSetup() {
     my_logger.setLogPattern("%{type} file %{file} function %{function} line %{line} %{message}");
 }
 
+constexpr Log::LogRecord l = {Log::DebugMsg, "main.cpp",     sizeof("main.cpp"),
+                              "main",        sizeof("main"), 18};
+
 static void BM_CreateMessage(benchmark::State &state) {
     for (auto _ : state) {
-        my_logger.createMessage(Log::DebugMsg, "main.cpp", sizeof("main.cpp"), "main",
-                                sizeof("main"), 18, "test", buffer, sizeof(buffer));
+        my_logger.createMessage(buffer, sizeof(buffer), l, "test");
     }
 }
 

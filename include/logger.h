@@ -16,30 +16,36 @@
     #define LOG_CURRENT_FUNC __func__
 #endif
 
-#define Debug(LoggerType, message)                                                         \
-    if constexpr (LOGGER_LOG_DEBUG_ENABLED) {                                              \
-        LoggerType.log(Log::messageType::DebugMsg, __FILE__, sizeof(__FILE__) - 1,         \
-                       LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__, message); \
+#define Debug(LoggerType, message)                                                                \
+    if constexpr (LOGGER_LOG_DEBUG_ENABLED) {                                                     \
+        LoggerType.log(Log::LogRecord{Log::messageType::DebugMsg, __FILE__, sizeof(__FILE__) - 1, \
+                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__},  \
+                       message);                                                                  \
     }
-#define Info(LoggerType, message)                                                          \
-    if constexpr (LOGGER_LOG_INFO_ENABLED) {                                               \
-        LoggerType.log(Log::messageType::InfoMsg, __FILE__, sizeof(__FILE__) - 1,          \
-                       LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__, message); \
+#define Info(LoggerType, message)                                                                \
+    if constexpr (LOGGER_LOG_INFO_ENABLED) {                                                     \
+        LoggerType.log(Log::LogRecord{Log::messageType::InfoMsg, __FILE__, sizeof(__FILE__) - 1, \
+                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
+                       message);                                                                 \
     }
-#define Warning(LoggerType, message)                                                       \
-    if constexpr (LOGGER_LOG_WARNING_ENABLED) {                                            \
-        LoggerType.log(Log::messageType::WarningMsg, __FILE__, sizeof(__FILE__) - 1,       \
-                       LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__, message); \
+#define Warning(LoggerType, message)                                                     \
+    if constexpr (LOGGER_LOG_WARNING_ENABLED) {                                          \
+        LoggerType.log(                                                                  \
+            Log::LogRecord{Log::messageType::WarningMsg, __FILE__, sizeof(__FILE__) - 1, \
+                           LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__},    \
+            message);                                                                    \
     }
-#define Error(LoggerType, message)                                                         \
-    if constexpr (LOGGER_LOG_ERROR_ENABLED) {                                              \
-        LoggerType.log(Log::messageType::ErrorMsg, __FILE__, sizeof(__FILE__) - 1,         \
-                       LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__, message); \
+#define Error(LoggerType, message)                                                                \
+    if constexpr (LOGGER_LOG_ERROR_ENABLED) {                                                     \
+        LoggerType.log(Log::LogRecord{Log::messageType::ErrorMsg, __FILE__, sizeof(__FILE__) - 1, \
+                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__},  \
+                       message);                                                                  \
     }
-#define Fatal(LoggerType, message)                                                         \
-    if constexpr (LOGGER_LOG_FATAL_ENABLED) {                                              \
-        LoggerType.log(Log::messageType::FatalMsg, __FILE__, sizeof(__FILE__) - 1,         \
-                       LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__, message); \
+#define Fatal(LoggerType, message)                                                                \
+    if constexpr (LOGGER_LOG_FATAL_ENABLED) {                                                     \
+        LoggerType.log(Log::LogRecord{Log::messageType::FatalMsg, __FILE__, sizeof(__FILE__) - 1, \
+                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__},  \
+                       message);                                                                  \
     }
 
 namespace Log {
@@ -55,9 +61,32 @@ enum messageType : int {
 template <typename ConcreteSink>
 class ILogSink {
 public:
-    void send(const messageType &msgType, const char *data, size_t size) const {
+    void send(const messageType msgType, const char *data, size_t size) const {
         static_cast<ConcreteSink *>(this)->sendImpl(msgType, data, size);
     }
+};
+
+struct LogRecord {
+public:
+    const messageType msgType;
+    const char *file;
+    const size_t file_len;
+    const char *func;
+    const size_t func_len;
+    const int line;
+
+    constexpr LogRecord(const messageType v_msgType,
+                        const char *v_file,
+                        size_t v_file_len,
+                        const char *v_func,
+                        size_t v_func_len,
+                        int v_line) noexcept
+        : msgType(v_msgType),
+          file(v_file),
+          file_len(v_file_len),
+          func(v_func),
+          func_len(v_func_len),
+          line(v_line) {}
 };
 
 /**
@@ -95,7 +124,7 @@ public:
      * @example "%{date}%{time}"
      * Output: "<current date>%{time}"
      */
-    void setLogPattern(const char *pattern) {
+    bool setLogPattern(const char *pattern) {
         tokenOpsCount = 0;
         size_t literal_buffer_pos = 0;
 
@@ -139,18 +168,21 @@ public:
                 }
             }
 
-            if (found_type != tokType::TokInvalid) {
-                tokenOps[tokenOpsCount] = {found_type, dest, literal_len};
-                ++tokenOpsCount;
-                p = brace_end + 1;
-                start_of_literal = p;
-            } else {
-                ++p;
+            TokHandlerFunc handler = getTokHandler(found_type);
+
+            if (handler == nullptr) {
+                return false;
             }
+
+            tokenOps[tokenOpsCount] = {found_type, dest, literal_len, handler};
+            ++tokenOpsCount;
+            p = brace_end + 1;
+            start_of_literal = p;
         }
+        return true;
     }
 
-    void setUserHandler(void (*_handler)(const messageType &msgType,
+    void setUserHandler(void (*_handler)(const messageType msgType,
                                          const char *message,
                                          size_t msg_size)) {
         userHandler = _handler;
@@ -167,28 +199,21 @@ public:
      * Main logging function. Calls provided sinks and callbacks if enabled. Be careful, function
      * itself don't control logging level.
      */
-    void log(const messageType &msgType,
-             const char *file,
-             size_t file_len,
-             const char *func,
-             size_t func_len,
-             int line,
-             const char *str) {
-        if (msgType > logLevel) {
+    void log(const LogRecord &record, const char *str) {
+        if (record.msgType > logLevel) {
             return;
         }
 
         static thread_local char msg[LOGGER_MAX_STR_SIZE];
-        size_t msg_size =
-            createMessage(msgType, file, file_len, func, func_len, line, str, msg, sizeof(msg));
+        size_t msg_size = createMessage(msg, sizeof(msg), record, str);
 
         if constexpr (ENABLE_SINKS) {
-            send_to_all_sinks(msgType, msg, msg_size);
+            send_to_all_sinks(record.msgType, msg, msg_size);
         }
 
         if constexpr (ENABLE_PRINT_CALLBACK) {
             if (userHandler != nullptr) {
-                userHandler(msgType, msg, msg_size);
+                userHandler(record.msgType, msg, msg_size);
             }
         }
     }
@@ -206,23 +231,12 @@ public:
      * Creates log message with specified in @brief setMessagePattern
      * view and put it into `outBuf` and control it's size with `bufSize`.
      */
-    size_t createMessage(const messageType &msgType,
-                         const char *file,
-                         size_t file_len,
-                         const char *func,
-                         size_t func_len,
-                         const int line,
-                         const char *str,
-                         char *outBuf,
-                         size_t bufSize) {
+    size_t createMessage(char *outBuf, size_t bufSize, const LogRecord &record, const char *str) {
         size_t pos = 0;
 
         for (size_t i = 0; i < tokenOpsCount; i++) {
             append(pos, outBuf, bufSize, tokenOps[i].literal, tokenOps[i].literal_len);
-
-            const int handerPos = static_cast<int>(tokenOps[i].type);
-            tokHanlders[handerPos](pos, outBuf, bufSize, msgType, file, file_len, func, func_len,
-                                   line, str, data_provider_instance);
+            tokenOps[i].handler(pos, outBuf, bufSize, record, str, data_provider_instance);
         }
 
         outBuf[pos] = '\0';
@@ -244,10 +258,18 @@ private:
         TokInvalid
     };
 
+    using TokHandlerFunc = void (*)(size_t &pos,
+                                    char *outBuf,
+                                    size_t bufSize,
+                                    const LogRecord &record,
+                                    const char *str,
+                                    const TDataProvider &data_provider_instance);
+
     struct TokenOp {
         tokType type;
         const char *literal;
         size_t literal_len;
+        TokHandlerFunc handler;
     };
 
     /**
@@ -271,12 +293,7 @@ private:
     static void tokDateHandler(size_t &pos,
                                char *outBuf,
                                size_t bufSize,
-                               [[maybe_unused]] const Log::messageType msgType,
-                               [[maybe_unused]] const char *file,
-                               [[maybe_unused]] size_t file_len,
-                               [[maybe_unused]] const char *func,
-                               [[maybe_unused]] size_t func_len,
-                               [[maybe_unused]] int line,
+                               const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                const TDataProvider &data_provider_instance) {
         char temp[LOGGER_MAX_TEMP_SIZE];
@@ -287,12 +304,7 @@ private:
     static void tokTimeHandler(size_t &pos,
                                char *outBuf,
                                size_t bufSize,
-                               [[maybe_unused]] const Log::messageType msgType,
-                               [[maybe_unused]] const char *file,
-                               [[maybe_unused]] size_t file_len,
-                               [[maybe_unused]] const char *func,
-                               [[maybe_unused]] size_t func_len,
-                               [[maybe_unused]] int line,
+                               const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                const TDataProvider &data_provider_instance) {
         char temp[LOGGER_MAX_TEMP_SIZE];
@@ -303,12 +315,7 @@ private:
     static void tokThreadHandler(size_t &pos,
                                  char *outBuf,
                                  size_t bufSize,
-                                 [[maybe_unused]] const Log::messageType msgType,
-                                 [[maybe_unused]] const char *file,
-                                 [[maybe_unused]] size_t file_len,
-                                 [[maybe_unused]] const char *func,
-                                 [[maybe_unused]] size_t func_len,
-                                 [[maybe_unused]] int line,
+                                 const LogRecord &record,
                                  [[maybe_unused]] const char *str,
                                  const TDataProvider &data_provider_instance) {
         char temp[LOGGER_MAX_TEMP_SIZE];
@@ -319,12 +326,7 @@ private:
     static void tokPidHandler(size_t &pos,
                               char *outBuf,
                               size_t bufSize,
-                              [[maybe_unused]] const Log::messageType msgType,
-                              [[maybe_unused]] const char *file,
-                              [[maybe_unused]] size_t file_len,
-                              [[maybe_unused]] const char *func,
-                              [[maybe_unused]] size_t func_len,
-                              [[maybe_unused]] int line,
+                              const LogRecord &record,
                               [[maybe_unused]] const char *str,
                               const TDataProvider &data_provider_instance) {
         char temp[LOGGER_MAX_TEMP_SIZE];
@@ -335,16 +337,11 @@ private:
     static void tokLevelHandler(size_t &pos,
                                 char *outBuf,
                                 size_t bufSize,
-                                const Log::messageType msgType,
-                                [[maybe_unused]] const char *file,
-                                [[maybe_unused]] size_t file_len,
-                                [[maybe_unused]] const char *func,
-                                [[maybe_unused]] size_t func_len,
-                                [[maybe_unused]] int line,
+                                const LogRecord &record,
                                 [[maybe_unused]] const char *str,
                                 [[maybe_unused]] const TDataProvider &data_provider_instance) {
-        const char *ch = msg_log_types[static_cast<int>(msgType)];
-        size_t len = msg_log_type_lengths[static_cast<int>(msgType)];
+        const char *ch = msg_log_types[static_cast<int>(record.msgType)];
+        size_t len = msg_log_type_lengths[static_cast<int>(record.msgType)];
 
         append(pos, outBuf, bufSize, ch, len);
     }
@@ -352,56 +349,36 @@ private:
     static void tokFileHandler(size_t &pos,
                                char *outBuf,
                                size_t bufSize,
-                               [[maybe_unused]] const Log::messageType msgType,
-                               const char *file,
-                               size_t file_len,
-                               [[maybe_unused]] const char *func,
-                               [[maybe_unused]] size_t func_len,
-                               [[maybe_unused]] int line,
+                               const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] const TDataProvider &data_provider_instance) {
-        append(pos, outBuf, bufSize, file, file_len);
+        append(pos, outBuf, bufSize, record.file, record.file_len);
     }
 
     static void tokFuncHandler(size_t &pos,
                                char *outBuf,
                                size_t bufSize,
-                               [[maybe_unused]] const Log::messageType msgType,
-                               [[maybe_unused]] const char *file,
-                               [[maybe_unused]] size_t file_len,
-                               const char *func,
-                               size_t func_len,
-                               [[maybe_unused]] int line,
+                               const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] const TDataProvider &data_provider_instance) {
-        append(pos, outBuf, bufSize, func, func_len);
+        append(pos, outBuf, bufSize, record.func, record.func_len);
     }
 
     static void tokLineHandler(size_t &pos,
                                char *outBuf,
                                [[maybe_unused]] size_t bufSize,
-                               [[maybe_unused]] const Log::messageType msgType,
-                               [[maybe_unused]] const char *file,
-                               [[maybe_unused]] size_t file_len,
-                               [[maybe_unused]] const char *func,
-                               [[maybe_unused]] size_t func_len,
-                               [[maybe_unused]] int line,
+                               const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] const TDataProvider &data_provider_instance) {
         char *tail = outBuf + pos;
-        std::to_chars_result result = std::to_chars(tail, tail + (bufSize - pos), line);
+        std::to_chars_result result = std::to_chars(tail, tail + (bufSize - pos), record.line);
         pos += result.ptr - tail;
     }
 
     static void tokMessageHandler(size_t &pos,
                                   char *outBuf,
                                   size_t bufSize,
-                                  [[maybe_unused]] const Log::messageType msgType,
-                                  [[maybe_unused]] const char *file,
-                                  [[maybe_unused]] size_t file_len,
-                                  [[maybe_unused]] const char *func,
-                                  [[maybe_unused]] size_t func_len,
-                                  [[maybe_unused]] int line,
+                                  const LogRecord &record,
                                   [[maybe_unused]] const char *str,
                                   [[maybe_unused]] const TDataProvider &data_provider_instance) {
         size_t len = strnlen(str, LOGGER_MAX_MESSAGE_SIZE);
@@ -411,15 +388,49 @@ private:
     static void tokInvalidHandler([[maybe_unused]] size_t &pos,
                                   [[maybe_unused]] char *outBuf,
                                   [[maybe_unused]] size_t bufSize,
-                                  [[maybe_unused]] const Log::messageType msgType,
-                                  [[maybe_unused]] const char *file,
-                                  [[maybe_unused]] size_t file_len,
-                                  [[maybe_unused]] const char *func,
-                                  [[maybe_unused]] size_t func_len,
-                                  [[maybe_unused]] int line,
+                                  const LogRecord &record,
                                   [[maybe_unused]] const char *str,
                                   [[maybe_unused]] const TDataProvider &data_provider_instance) {
         append(pos, outBuf, bufSize, "invalid token", sizeof("invalid token"));
+    }
+
+    TokHandlerFunc getTokHandler(const tokType &type) {
+        TokHandlerFunc handler = nullptr;
+        switch (type) {
+            case tokType::TokDate:
+                handler = tokDateHandler;
+                break;
+            case tokType::TokTime:
+                handler = tokTimeHandler;
+                break;
+            case tokType::TokLevel:
+                handler = tokLevelHandler;
+                break;
+            case tokType::TokFile:
+                handler = tokFileHandler;
+                break;
+            case tokType::TokThread:
+                handler = tokThreadHandler;
+                break;
+            case tokType::TokFunc:
+                handler = tokFuncHandler;
+                break;
+            case tokType::TokLine:
+                handler = tokLineHandler;
+                break;
+            case tokType::TokPid:
+                handler = tokPidHandler;
+                break;
+            case tokType::TokMessage:
+                handler = tokMessageHandler;
+                break;
+            case tokType::TokInvalid:
+                handler = tokInvalidHandler;
+                break;
+            default:
+                break;
+        }
+        return handler;
     }
 
     int logLevel = 3;
@@ -473,24 +484,7 @@ private:
     }
 
     /// user callback to print logging message
-    void (*userHandler)(const messageType &msgType, const char *message, size_t msg_size) = nullptr;
-
-    using TokHandlerFunc = void (*)(size_t &pos,
-                                    char *outBuf,
-                                    size_t bufSize,
-                                    const Log::messageType msgType,
-                                    const char *file,
-                                    size_t file_len,
-                                    const char *func,
-                                    size_t func_len,
-                                    int line,
-                                    const char *str,
-                                    const TDataProvider &data_provider_instance);
-    /// Handlers to print data in logging message, handlers should be in the same place as
-    /// corresponding tokens in array `tokens`
-    static constexpr TokHandlerFunc tokHanlders[] = {
-        tokDateHandler, tokTimeHandler, tokLevelHandler, tokFileHandler,   tokThreadHandler,
-        tokFuncHandler, tokLineHandler, tokPidHandler,   tokMessageHandler};
+    void (*userHandler)(const messageType msgType, const char *message, size_t msg_size) = nullptr;
 
     /// types of logging level, added to output message
     static constexpr const char *msg_log_types[] = {"FATAL", "ERROR", "WARN", "INFO", "DEBUG"};
@@ -501,7 +495,6 @@ private:
     static constexpr const char *tokens[] = {"%{date}", "%{time}",   "%{type}",
                                              "%{file}", "%{thread}", "%{function}",
                                              "%{line}", "%{pid}",    "%{message}"};
-    // static constexpr size_t tokensNumber = sizeof(tokens) / sizeof(tokens[0]);
     static constexpr size_t tokensNumber = std::size(tokens);
 };
 
