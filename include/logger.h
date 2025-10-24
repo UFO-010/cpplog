@@ -199,7 +199,7 @@ public:
      * Main logging function. Calls provided sinks and callbacks if enabled. Be careful, function
      * itself don't control logging level.
      */
-    void log(const LogRecord &record, const char *str) {
+    void log(const LogRecord &record, const char *str) const {
         if (record.msgType > logLevel) {
             return;
         }
@@ -231,7 +231,10 @@ public:
      * Creates log message with specified in @brief setMessagePattern
      * view and put it into `outBuf` and control it's size with `bufSize`.
      */
-    size_t createMessage(char *outBuf, size_t bufSize, const LogRecord &record, const char *str) {
+    size_t createMessage(char *outBuf,
+                         size_t bufSize,
+                         const LogRecord &record,
+                         const char *str) const {
         size_t pos = 0;
 
         for (size_t i = 0; i < tokenOpsCount; i++) {
@@ -293,7 +296,7 @@ private:
     static void tokDateHandler(size_t &pos,
                                char *outBuf,
                                size_t bufSize,
-                               const LogRecord &record,
+                               [[maybe_unused]] const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                const TDataProvider &data_provider_instance) {
         char temp[LOGGER_MAX_TEMP_SIZE];
@@ -304,7 +307,7 @@ private:
     static void tokTimeHandler(size_t &pos,
                                char *outBuf,
                                size_t bufSize,
-                               const LogRecord &record,
+                               [[maybe_unused]] const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                const TDataProvider &data_provider_instance) {
         char temp[LOGGER_MAX_TEMP_SIZE];
@@ -315,7 +318,7 @@ private:
     static void tokThreadHandler(size_t &pos,
                                  char *outBuf,
                                  size_t bufSize,
-                                 const LogRecord &record,
+                                 [[maybe_unused]] const LogRecord &record,
                                  [[maybe_unused]] const char *str,
                                  const TDataProvider &data_provider_instance) {
         char temp[LOGGER_MAX_TEMP_SIZE];
@@ -326,7 +329,7 @@ private:
     static void tokPidHandler(size_t &pos,
                               char *outBuf,
                               size_t bufSize,
-                              const LogRecord &record,
+                              [[maybe_unused]] const LogRecord &record,
                               [[maybe_unused]] const char *str,
                               const TDataProvider &data_provider_instance) {
         char temp[LOGGER_MAX_TEMP_SIZE];
@@ -378,7 +381,7 @@ private:
     static void tokMessageHandler(size_t &pos,
                                   char *outBuf,
                                   size_t bufSize,
-                                  const LogRecord &record,
+                                  [[maybe_unused]] const LogRecord &record,
                                   [[maybe_unused]] const char *str,
                                   [[maybe_unused]] const TDataProvider &data_provider_instance) {
         size_t len = strnlen(str, LOGGER_MAX_MESSAGE_SIZE);
@@ -388,7 +391,7 @@ private:
     static void tokInvalidHandler([[maybe_unused]] size_t &pos,
                                   [[maybe_unused]] char *outBuf,
                                   [[maybe_unused]] size_t bufSize,
-                                  const LogRecord &record,
+                                  [[maybe_unused]] const LogRecord &record,
                                   [[maybe_unused]] const char *str,
                                   [[maybe_unused]] const TDataProvider &data_provider_instance) {
         append(pos, outBuf, bufSize, "invalid token", sizeof("invalid token"));

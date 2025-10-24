@@ -19,20 +19,17 @@ public:
     size_t getCurrentTime(char *buffer, size_t bufferSize) const { return 0; }
 };
 
-const EmptyProvider emptyProvider;
-const NullSink nullSink;
-Log::Logger<EmptyProvider, NullSink> my_logger(emptyProvider, nullSink);
-char buffer[LOGGER_MAX_STR_SIZE];
-
-static void LoggerSetup() {
+static void BM_CreateMessage(benchmark::State &state) {
+    const EmptyProvider emptyProvider;
+    const NullSink nullSink;
+    Log::Logger<EmptyProvider, NullSink> my_logger(emptyProvider, nullSink);
     my_logger.setLogLevel(Log::DebugMsg);
     my_logger.setLogPattern("%{type} file %{file} function %{function} line %{line} %{message}");
-}
 
-constexpr Log::LogRecord l = {Log::DebugMsg, "main.cpp",     sizeof("main.cpp"),
-                              "main",        sizeof("main"), 18};
+    char buffer[LOGGER_MAX_STR_SIZE];
+    constexpr Log::LogRecord l = {Log::DebugMsg, "main.cpp",     sizeof("main.cpp"),
+                                  "main",        sizeof("main"), 18};
 
-static void BM_CreateMessage(benchmark::State &state) {
     for (auto _ : state) {
         my_logger.createMessage(buffer, sizeof(buffer), l, "test");
     }
@@ -41,6 +38,7 @@ static void BM_CreateMessage(benchmark::State &state) {
 BENCHMARK(BM_CreateMessage);
 
 static void BM_Stdprint(benchmark::State &state) {
+    char buffer[LOGGER_MAX_STR_SIZE];
     for (auto _ : state) {
         std::snprintf(buffer, sizeof(buffer), "%d file %s function %s line %d %s", Log::DebugMsg,
                       "main.cpp", "main", 18, "test");
@@ -50,15 +48,20 @@ static void BM_Stdprint(benchmark::State &state) {
 BENCHMARK(BM_Stdprint);
 
 static void BM_logging(benchmark::State &state) {
+    const EmptyProvider emptyProvider;
+    const NullSink nullSink;
+    Log::Logger<EmptyProvider, NullSink> my_logger(emptyProvider, nullSink);
+    my_logger.setLogLevel(Log::DebugMsg);
+    my_logger.setLogPattern("%{type} file %{file} function %{function} line %{line} %{message}");
+
     for (auto _ : state) {
-        Debug(my_logger, "");
+        Debug(my_logger, "test");
     }
 }
 
 BENCHMARK(BM_logging);
 
 int main(int argc, char *argv[]) {
-    LoggerSetup();
     ::benchmark::Initialize(&argc, argv);
     if (::benchmark::ReportUnrecognizedArguments(argc, argv)) return 1;
 
