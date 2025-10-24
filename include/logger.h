@@ -16,41 +16,40 @@
     #define LOG_CURRENT_FUNC __func__
 #endif
 
-#define Debug(LoggerType, message)                                                                \
-    if constexpr (LOGGER_LOG_DEBUG_ENABLED) {                                                     \
-        LoggerType.log(Log::LogRecord{Log::messageType::DebugMsg, __FILE__, sizeof(__FILE__) - 1, \
-                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__},  \
-                       message);                                                                  \
-    }
-#define Info(LoggerType, message)                                                                \
-    if constexpr (LOGGER_LOG_INFO_ENABLED) {                                                     \
-        LoggerType.log(Log::LogRecord{Log::messageType::InfoMsg, __FILE__, sizeof(__FILE__) - 1, \
+#define Debug(LoggerType, message)                                                               \
+    if constexpr (LOGGER_LOG_DEBUG_ENABLED) {                                                    \
+        LoggerType.log(Log::LogRecord{Log::level::DebugMsg, __FILE__, sizeof(__FILE__) - 1,      \
                                       LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
                        message);                                                                 \
     }
-#define Warning(LoggerType, message)                                                     \
-    if constexpr (LOGGER_LOG_WARNING_ENABLED) {                                          \
-        LoggerType.log(                                                                  \
-            Log::LogRecord{Log::messageType::WarningMsg, __FILE__, sizeof(__FILE__) - 1, \
-                           LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__},    \
-            message);                                                                    \
+#define Info(LoggerType, message)                                                                \
+    if constexpr (LOGGER_LOG_INFO_ENABLED) {                                                     \
+        LoggerType.log(Log::LogRecord{Log::level::InfoMsg, __FILE__, sizeof(__FILE__) - 1,       \
+                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
+                       message);                                                                 \
     }
-#define Error(LoggerType, message)                                                                \
-    if constexpr (LOGGER_LOG_ERROR_ENABLED) {                                                     \
-        LoggerType.log(Log::LogRecord{Log::messageType::ErrorMsg, __FILE__, sizeof(__FILE__) - 1, \
-                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__},  \
-                       message);                                                                  \
+#define Warning(LoggerType, message)                                                             \
+    if constexpr (LOGGER_LOG_WARNING_ENABLED) {                                                  \
+        LoggerType.log(Log::LogRecord{Log::level::WarningMsg, __FILE__, sizeof(__FILE__) - 1,    \
+                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
+                       message);                                                                 \
     }
-#define Fatal(LoggerType, message)                                                                \
-    if constexpr (LOGGER_LOG_FATAL_ENABLED) {                                                     \
-        LoggerType.log(Log::LogRecord{Log::messageType::FatalMsg, __FILE__, sizeof(__FILE__) - 1, \
-                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__},  \
-                       message);                                                                  \
+#define Error(LoggerType, message)                                                               \
+    if constexpr (LOGGER_LOG_ERROR_ENABLED) {                                                    \
+        LoggerType.log(Log::LogRecord{Log::level::ErrorMsg, __FILE__, sizeof(__FILE__) - 1,      \
+                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
+                       message);                                                                 \
+    }
+#define Fatal(LoggerType, message)                                                               \
+    if constexpr (LOGGER_LOG_FATAL_ENABLED) {                                                    \
+        LoggerType.log(Log::LogRecord{Log::level::FatalMsg, __FILE__, sizeof(__FILE__) - 1,      \
+                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
+                       message);                                                                 \
     }
 
 namespace Log {
 
-enum messageType : int {
+enum class level : int {
     FatalMsg,
     ErrorMsg,
     WarningMsg,
@@ -61,21 +60,21 @@ enum messageType : int {
 template <typename ConcreteSink>
 class ILogSink {
 public:
-    void send(const messageType msgType, const char *data, size_t size) const {
+    void send(const level msgType, const char *data, size_t size) const {
         static_cast<ConcreteSink *>(this)->sendImpl(msgType, data, size);
     }
 };
 
 struct LogRecord {
 public:
-    const messageType msgType;
+    const level msgType;
     const char *file;
     const size_t file_len;
     const char *func;
     const size_t func_len;
     const int line;
 
-    constexpr LogRecord(const messageType v_msgType,
+    constexpr LogRecord(const level v_msgType,
                         const char *v_file,
                         size_t v_file_len,
                         const char *v_func,
@@ -109,7 +108,7 @@ public:
      * @param level priority of messages to display
      * Set logging level. Messages with a lower priority level will be ignored
      */
-    void setLogLevel(int level) { logLevel = level; }
+    void setLogLevel(const level lev) { logLevel = static_cast<int>(lev); }
 
     int getLevel() const { return logLevel; }
 
@@ -183,7 +182,7 @@ public:
         return true;
     }
 
-    void setUserHandler(void (*_handler)(const messageType msgType,
+    void setUserHandler(void (*_handler)(const level msgType,
                                          const char *message,
                                          size_t msg_size)) {
         userHandler = _handler;
@@ -201,7 +200,7 @@ public:
      * itself don't control logging level.
      */
     void log(const LogRecord &record, const char *str) const {
-        if (record.msgType > logLevel) {
+        if (static_cast<int>(record.msgType) > logLevel) {
             return;
         }
 
@@ -461,7 +460,7 @@ private:
      */
     template <std::size_t I = 0>
     inline typename std::enable_if<I == sizeof...(TSinkTypes), void>::type send_to_all_sinks(
-        [[maybe_unused]] const messageType &msgType,
+        [[maybe_unused]] const level &msgType,
         [[maybe_unused]] const char *data,
         [[maybe_unused]] size_t size) const {
         // no sinks left, do nothing
@@ -478,7 +477,7 @@ private:
      */
     template <std::size_t I = 0>
         inline typename std::enable_if <
-        I<sizeof...(TSinkTypes), void>::type send_to_all_sinks(const messageType &msgType,
+        I<sizeof...(TSinkTypes), void>::type send_to_all_sinks(const level &msgType,
                                                                const char *data,
                                                                size_t size) const {
         // call current sink
@@ -488,7 +487,7 @@ private:
     }
 
     /// user callback to print logging message
-    void (*userHandler)(const messageType msgType, const char *message, size_t msg_size) = nullptr;
+    void (*userHandler)(const level msgType, const char *message, size_t msg_size) = nullptr;
 
     /// types of logging level, added to output message
     static constexpr const char *msg_log_types[] = {"FATAL", "ERROR", "WARN", "INFO", "DEBUG"};

@@ -3,7 +3,7 @@
 
 class NullSink : public Log::ILogSink<NullSink> {
 public:
-    void send(const Log::messageType &, const char *, size_t) const {
+    void send(const Log::level &, const char *, size_t) const {
         // do nothing
     }
 };
@@ -23,13 +23,13 @@ static void BM_CreateMessage(benchmark::State &state) {
     const EmptyProvider emptyProvider;
     const NullSink nullSink;
     Log::Logger<EmptyProvider, NullSink> my_logger(emptyProvider, nullSink);
-    my_logger.setLogLevel(Log::DebugMsg);
+    my_logger.setLogLevel(Log::level::DebugMsg);
     my_logger.setLogPattern("%{type} file %{file} function %{function} line %{line} %{message}");
 
     std::string buf;
     buf.resize(LOGGER_MAX_STR_SIZE);
-    constexpr Log::LogRecord l = {Log::DebugMsg, "main.cpp",     sizeof("main.cpp"),
-                                  "main",        sizeof("main"), 18};
+    constexpr Log::LogRecord l = {Log::level::DebugMsg, "main.cpp", sizeof("main.cpp"), "main",
+                                  sizeof("main"),       18};
 
     for (auto _ : state) {
         my_logger.createMessage(buf.data(), buf.size(), l, "test");
@@ -41,8 +41,8 @@ BENCHMARK(BM_CreateMessage);
 static void BM_Stdprint(benchmark::State &state) {
     char buffer[LOGGER_MAX_STR_SIZE];
     for (auto _ : state) {
-        std::snprintf(buffer, sizeof(buffer), "%d file %s function %s line %d %s", Log::DebugMsg,
-                      "main.cpp", "main", 18, "test");
+        std::snprintf(buffer, sizeof(buffer), "%d file %s function %s line %d %s",
+                      Log::level::DebugMsg, "main.cpp", "main", 18, "test");
     }
 }
 
@@ -52,7 +52,7 @@ static void BM_logging(benchmark::State &state) {
     const EmptyProvider emptyProvider;
     const NullSink nullSink;
     Log::Logger<EmptyProvider, NullSink> my_logger(emptyProvider, nullSink);
-    my_logger.setLogLevel(Log::DebugMsg);
+    my_logger.setLogLevel(Log::level::DebugMsg);
     my_logger.setLogPattern("%{type} file %{file} function %{function} line %{line} %{message}");
 
     for (auto _ : state) {
