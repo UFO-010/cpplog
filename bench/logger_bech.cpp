@@ -29,7 +29,7 @@ static void BM_CreateMessage(benchmark::State &state) {
     std::string buf;
     buf.resize(LOGGER_MAX_STR_SIZE);
     constexpr Log::LogRecord l = {Log::level::DebugMsg, "main.cpp", sizeof("main.cpp"), "main",
-                                  sizeof("main"),       18};
+                                  sizeof("main"),       18 /*, "test"*/};
 
     for (auto _ : state) {
         my_logger.createMessage(buf.data(), buf.size(), l, "test");
@@ -39,9 +39,10 @@ static void BM_CreateMessage(benchmark::State &state) {
 BENCHMARK(BM_CreateMessage);
 
 static void BM_Stdprint(benchmark::State &state) {
-    char buffer[LOGGER_MAX_STR_SIZE];
+    std::string buf;
+    buf.resize(LOGGER_MAX_STR_SIZE);
     for (auto _ : state) {
-        std::snprintf(buffer, sizeof(buffer), "%d file %s function %s line %d %s",
+        std::snprintf(buf.data(), buf.size(), "%d file %s function %s line %d %s",
                       Log::level::DebugMsg, "main.cpp", "main", 18, "test");
     }
 }
@@ -61,6 +62,20 @@ static void BM_logging(benchmark::State &state) {
 }
 
 BENCHMARK(BM_logging);
+
+static void BM_SingleMessage(benchmark::State &state) {
+    const EmptyProvider emptyProvider;
+    const NullSink nullSink;
+    Log::Logger<EmptyProvider, NullSink> my_logger(emptyProvider, nullSink);
+    my_logger.setLogLevel(Log::level::DebugMsg);
+    my_logger.setLogPattern("%{message}");
+
+    for (auto _ : state) {
+        Debug(my_logger, "test");
+    }
+}
+
+BENCHMARK(BM_SingleMessage);
 
 int main(int argc, char *argv[]) {
     ::benchmark::Initialize(&argc, argv);

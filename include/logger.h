@@ -308,46 +308,38 @@ private:
 
     static void tokDateHandler(size_t &pos,
                                char *outBuf,
-                               size_t bufSize,
+                               [[maybe_unused]] size_t bufSize,
                                [[maybe_unused]] const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                const TDataProvider &data_provider_instance) {
-        char temp[LOGGER_MAX_TEMP_SIZE];
-        size_t len = data_provider_instance.getCurrentDate(temp, LOGGER_MAX_TEMP_SIZE);
-        append(pos, outBuf, bufSize, temp, len);
+        pos += data_provider_instance.getCurrentDate(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
     }
 
     static void tokTimeHandler(size_t &pos,
                                char *outBuf,
-                               size_t bufSize,
+                               [[maybe_unused]] size_t bufSize,
                                [[maybe_unused]] const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                const TDataProvider &data_provider_instance) {
-        char temp[LOGGER_MAX_TEMP_SIZE];
-        size_t len = data_provider_instance.getCurrentTime(temp, LOGGER_MAX_TEMP_SIZE);
-        append(pos, outBuf, bufSize, temp, len);
+        pos += data_provider_instance.getCurrentTime(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
     }
 
     static void tokThreadHandler(size_t &pos,
                                  char *outBuf,
-                                 size_t bufSize,
+                                 [[maybe_unused]] size_t bufSize,
                                  [[maybe_unused]] const LogRecord &record,
                                  [[maybe_unused]] const char *str,
                                  const TDataProvider &data_provider_instance) {
-        char temp[LOGGER_MAX_TEMP_SIZE];
-        size_t len = data_provider_instance.getThreadId(temp, LOGGER_MAX_TEMP_SIZE);
-        append(pos, outBuf, bufSize, temp, len);
+        pos += data_provider_instance.getThreadId(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
     }
 
     static void tokPidHandler(size_t &pos,
                               char *outBuf,
-                              size_t bufSize,
+                              [[maybe_unused]] size_t bufSize,
                               [[maybe_unused]] const LogRecord &record,
                               [[maybe_unused]] const char *str,
                               const TDataProvider &data_provider_instance) {
-        char temp[LOGGER_MAX_TEMP_SIZE];
-        size_t len = data_provider_instance.getProcessName(temp, LOGGER_MAX_TEMP_SIZE);
-        append(pos, outBuf, bufSize, temp, len);
+        pos += data_provider_instance.getProcessName(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
     }
 
     static void tokLevelHandler(size_t &pos,
