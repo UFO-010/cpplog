@@ -23,13 +23,12 @@ static void BM_CreateMessage(benchmark::State &state) {
     const EmptyProvider emptyProvider;
     const NullSink nullSink;
     Log::Logger<EmptyProvider, NullSink> my_logger(emptyProvider, nullSink);
-    my_logger.setLogLevel(Log::level::DebugMsg);
     my_logger.setLogPattern("%{level} file %{file} function %{function} line %{line} %{message}");
 
     std::string buf;
     buf.resize(LOGGER_MAX_STR_SIZE);
     constexpr Log::LogRecord l = {Log::level::DebugMsg, "main.cpp", sizeof("main.cpp"), "main",
-                                  sizeof("main"),       18 /*, "test"*/};
+                                  sizeof("main"),       18};
 
     for (auto _ : state) {
         my_logger.createMessage(buf.data(), buf.size(), l, "test");

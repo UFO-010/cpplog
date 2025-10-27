@@ -211,7 +211,7 @@ public:
         }
 
         static thread_local char msg[LOGGER_MAX_STR_SIZE];
-        size_t msg_size = createMessage(msg, sizeof(msg), record, str);
+        size_t msg_size = createMessage(msg, LOGGER_MAX_STR_SIZE, record, str);
 
         if constexpr (ENABLE_SINKS) {
             send_to_all_sinks(record.msgType, msg, msg_size);
@@ -270,6 +270,7 @@ private:
                                     size_t bufSize,
                                     const LogRecord &record,
                                     const char *str,
+
                                     const TDataProvider &data_provider_instance);
 
     /**
