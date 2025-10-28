@@ -21,7 +21,7 @@ public:
     void send(const Log::level &msgType, const char *data, size_t size) const {
         if (ansi_cols_support && colors_enabled) {
             std::string colorized_msg;
-            size_t reset_pos = static_cast<size_t>(ansi_cols::RESET_COLOR);
+            auto reset_pos = static_cast<size_t>(ansi_cols::RESET_COLOR);
 
             colorized_msg.reserve((msg_colors[reset_pos].size() * 2) + size);
             colorized_msg.append(msg_colors[static_cast<size_t>(msgType)]);

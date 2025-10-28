@@ -4,7 +4,8 @@
 #include <cstring>
 #include <charconv>
 #include <tuple>
-#include <iterator>
+#include <array>
+#include <string_view>
 
 #include "logger_config.h"
 
@@ -16,45 +17,50 @@
     #define LOG_CURRENT_FUNC __func__
 #endif
 
-#define Debug(LoggerType, message, len)                                                          \
-    if constexpr (LOGGER_LOG_DEBUG_ENABLED) {                                                    \
-        LoggerType.log(Log::LogRecord{Log::level::DebugMsg, __FILE__, sizeof(__FILE__) - 1,      \
-                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
-                       message, len);                                                            \
+#define Debug(LoggerType, message, len)                                                           \
+    if constexpr (LOGGER_LOG_DEBUG_ENABLED) {                                                     \
+        constexpr std::string_view file_sv = __FILE__;                                            \
+        constexpr std::string_view func_sv = LOG_CURRENT_FUNC;                                    \
+        LoggerType.log(Log::LogRecord{Log::level::DebugMsg, file_sv, func_sv, __LINE__}, message, \
+                       len);                                                                      \
     }
 #define Info(LoggerType, message, len)                                                           \
     if constexpr (LOGGER_LOG_INFO_ENABLED) {                                                     \
-        LoggerType.log(Log::LogRecord{Log::level::InfoMsg, __FILE__, sizeof(__FILE__) - 1,       \
-                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
-                       message, len);                                                            \
+        constexpr std::string_view file_sv = __FILE__;                                           \
+        constexpr std::string_view func_sv = LOG_CURRENT_FUNC;                                   \
+        LoggerType.log(Log::LogRecord{Log::level::InfoMsg, file_sv, func_sv, __LINE__}, message, \
+                       len);                                                                     \
     }
-#define Warning(LoggerType, message, len)                                                        \
-    if constexpr (LOGGER_LOG_WARNING_ENABLED) {                                                  \
-        LoggerType.log(Log::LogRecord{Log::level::WarningMsg, __FILE__, sizeof(__FILE__) - 1,    \
-                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
-                       message, len);                                                            \
+#define Warning(LoggerType, message, len)                                                  \
+    if constexpr (LOGGER_LOG_WARNING_ENABLED) {                                            \
+        constexpr std::string_view file_sv = __FILE__;                                     \
+        constexpr std::string_view func_sv = LOG_CURRENT_FUNC;                             \
+        LoggerType.log(Log::LogRecord{Log::level::WarningMsg, file_sv, func_sv, __LINE__}, \
+                       message, len);                                                      \
     }
-#define Error(LoggerType, message, len)                                                          \
-    if constexpr (LOGGER_LOG_ERROR_ENABLED) {                                                    \
-        LoggerType.log(Log::LogRecord{Log::level::ErrorMsg, __FILE__, sizeof(__FILE__) - 1,      \
-                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
-                       message, len);                                                            \
+#define Error(LoggerType, message, len)                                                           \
+    if constexpr (LOGGER_LOG_ERROR_ENABLED) {                                                     \
+        constexpr std::string_view file_sv = __FILE__;                                            \
+        constexpr std::string_view func_sv = LOG_CURRENT_FUNC;                                    \
+        LoggerType.log(Log::LogRecord{Log::level::ErrorMsg, file_sv, func_sv, __LINE__}, message, \
+                       len);                                                                      \
     }
-#define Fatal(LoggerType, message, len)                                                          \
-    if constexpr (LOGGER_LOG_FATAL_ENABLED) {                                                    \
-        LoggerType.log(Log::LogRecord{Log::level::FatalMsg, __FILE__, sizeof(__FILE__) - 1,      \
-                                      LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
-                       message, len);                                                            \
+#define Fatal(LoggerType, message, len)                                                           \
+    if constexpr (LOGGER_LOG_FATAL_ENABLED) {                                                     \
+        constexpr std::string_view file_sv = __FILE__;                                            \
+        constexpr std::string_view func_sv = LOG_CURRENT_FUNC;                                    \
+        LoggerType.log(Log::LogRecord{Log::level::FatalMsg, file_sv, func_sv, __LINE__}, message, \
+                       len);                                                                      \
     }
 
 namespace Log {
 
 enum class level : int {
-    FatalMsg,
-    ErrorMsg,
-    WarningMsg,
-    InfoMsg,
-    DebugMsg,
+    FatalMsg = 0,
+    ErrorMsg = 1,
+    WarningMsg = 2,
+    InfoMsg = 3,
+    DebugMsg = 4,
 };
 
 template <typename ConcreteSink>
@@ -73,23 +79,17 @@ public:
 struct LogRecord {
 public:
     const level msgType;
-    const char *file;
-    const size_t file_len;
-    const char *func;
-    const size_t func_len;
+    const std::string_view file;
+    const std::string_view func;
     const int line;
 
     constexpr LogRecord(const level v_msgType,
-                        const char *v_file,
-                        size_t v_file_len,
-                        const char *v_func,
-                        size_t v_func_len,
+                        const std::string_view v_file,
+                        const std::string_view &v_func,
                         int v_line) noexcept
         : msgType(v_msgType),
           file(v_file),
-          file_len(v_file_len),
           func(v_func),
-          func_len(v_func_len),
           line(v_line) {}
 };
 
@@ -144,6 +144,7 @@ public:
 
         const char *p = pattern;
         const char *start_of_literal = p;
+        char *literal = literalBuffer.data();
 
         while (*p != '\0' && tokenOpsCount < LOGGER_MAX_TOKENS) {
             if (*p != '%') {
@@ -167,7 +168,11 @@ public:
                 literal_len = LOGGER_LITERAL_BUFFER_SIZE - literal_buffer_pos;
             }
 
-            char *dest = literalBuffer + literal_buffer_pos;
+            if (literal_buffer_pos >= LOGGER_LITERAL_BUFFER_SIZE) {
+                break;
+            }
+
+            char *dest = literal + literal_buffer_pos;
             if (literal_len > 0) {
                 std::memcpy(dest, start_of_literal, literal_len);
             }
@@ -175,8 +180,9 @@ public:
 
             auto token_len = static_cast<size_t>(brace_end + 1 - token_start);
             tokType found_type = tokType::TokInvalid;
-            for (size_t i = 0; i < tokensNumber; ++i) {
-                if (strncmp(token_start, tokens[i], token_len) == 0) {
+
+            for (size_t i = 0; i < tokens.size(); ++i) {
+                if (strncmp(token_start, tokens[i].data(), token_len) == 0) {
                     found_type = static_cast<tokType>(i);
                     break;
                 }
@@ -403,8 +409,8 @@ private:
                                 [[maybe_unused]] const char *str,
                                 [[maybe_unused]] size_t str_len,
                                 [[maybe_unused]] const TDataProvider &data_provider_instance) {
-        const char *ch = msg_log_types[static_cast<int>(record.msgType)];
-        size_t len = msg_log_type_lengths[static_cast<int>(record.msgType)];
+        const char *ch = msg_log_types[static_cast<int>(record.msgType)].data();
+        size_t len = msg_log_types[static_cast<int>(record.msgType)].size();
 
         append(pos, outBuf, bufSize, ch, len);
     }
@@ -416,7 +422,7 @@ private:
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] size_t str_len,
                                [[maybe_unused]] const TDataProvider &data_provider_instance) {
-        append(pos, outBuf, bufSize, record.file, record.file_len);
+        append(pos, outBuf, bufSize, record.file.data(), record.file.size());
     }
 
     static void tokFuncHandler(size_t &pos,
@@ -426,7 +432,7 @@ private:
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] size_t str_len,
                                [[maybe_unused]] const TDataProvider &data_provider_instance) {
-        append(pos, outBuf, bufSize, record.func, record.func_len);
+        append(pos, outBuf, bufSize, record.func.data(), record.func.size());
     }
 
     static void tokLineHandler(size_t &pos,
@@ -503,9 +509,9 @@ private:
     int logLevel = 3;
     /// holds all text before tokens found in `setLogPattern`. Token itself holds legth and pointer
     /// to text that comes before him, @see TokenOp
-    char literalBuffer[LOGGER_LITERAL_BUFFER_SIZE] = {};
+    std::array<char, LOGGER_LITERAL_BUFFER_SIZE> literalBuffer = {};
     /// found tokens, so the output will look the same as `setLogPattern`
-    TokenOp tokenOps[LOGGER_MAX_TOKENS] = {};
+    std::array<TokenOp, LOGGER_MAX_TOKENS> tokenOps = {};
     /// number of found tokens
     size_t tokenOpsCount = 0;
 
@@ -555,15 +561,12 @@ private:
     void (*userHandler)(const level msgType, const char *message, size_t msg_size) = nullptr;
 
     /// types of logging level, added to output message
-    static constexpr const char *msg_log_types[] = {"FATAL", "ERROR", "WARN", "INFO", "DEBUG"};
-    /// sizes of logging level strings, hardcoded
-    static constexpr size_t msg_log_type_lengths[] = {5, 5, 4, 4, 5};
-
+    static constexpr std::array<std::string_view, 5> msg_log_types = {"FATAL", "ERROR", "WARN",
+                                                                      "INFO", "DEBUG"};
     /// tokens for message pattern
-    static constexpr const char *tokens[] = {"%{date}", "%{time}",   "%{level}",
-                                             "%{file}", "%{thread}", "%{function}",
-                                             "%{line}", "%{pid}",    "%{message}"};
-    static constexpr size_t tokensNumber = std::size(tokens);
+    static constexpr std::array<std::string_view, 9> tokens = {
+        "%{date}",     "%{time}", "%{level}", "%{file}",   "%{thread}",
+        "%{function}", "%{line}", "%{pid}",   "%{message}"};
 };
 
 }  // namespace Log
