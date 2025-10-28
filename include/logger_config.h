@@ -9,8 +9,6 @@ constexpr int LOGGER_MAX_SINKS = 4;
 constexpr size_t LOGGER_MAX_STR_SIZE = 512;
 /// Maximum length of logger input message
 constexpr size_t LOGGER_MAX_MESSAGE_SIZE = 256;
-/// Maximum length of string to place time and data
-constexpr size_t LOGGER_MAX_TEMP_SIZE = 32;
 /// Maximum length of string to place numbers
 constexpr size_t LOGGER_MAX_NUMBUF_SIZE = 12;
 /// Maximum number of tokens to search in log message pattern

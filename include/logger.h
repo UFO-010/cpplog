@@ -363,7 +363,7 @@ private:
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] size_t str_len,
                                const TDataProvider &data_provider_instance) {
-        pos += data_provider_instance.getCurrentDate(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
+        pos += data_provider_instance.getCurrentDate(outBuf + pos, bufSize - pos);
     }
 
     static void tokTimeHandler(size_t &pos,
@@ -373,7 +373,7 @@ private:
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] size_t str_len,
                                const TDataProvider &data_provider_instance) {
-        pos += data_provider_instance.getCurrentTime(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
+        pos += data_provider_instance.getCurrentTime(outBuf + pos, bufSize - pos);
     }
 
     static void tokThreadHandler(size_t &pos,
@@ -383,7 +383,7 @@ private:
                                  [[maybe_unused]] const char *str,
                                  [[maybe_unused]] size_t str_len,
                                  const TDataProvider &data_provider_instance) {
-        pos += data_provider_instance.getThreadId(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
+        pos += data_provider_instance.getThreadId(outBuf + pos, bufSize - pos);
     }
 
     static void tokPidHandler(size_t &pos,
@@ -393,7 +393,7 @@ private:
                               [[maybe_unused]] const char *str,
                               [[maybe_unused]] size_t str_len,
                               const TDataProvider &data_provider_instance) {
-        pos += data_provider_instance.getProcessName(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
+        pos += data_provider_instance.getProcessName(outBuf + pos, bufSize - pos);
     }
 
     static void tokLevelHandler(size_t &pos,
