@@ -31,7 +31,7 @@ static void BM_CreateMessage(benchmark::State &state) {
                                   sizeof("main"),       18};
 
     for (auto _ : state) {
-        my_logger.createMessage(buf.data(), buf.size(), l, "test");
+        my_logger.createMessage(buf.data(), buf.size(), l, "test", sizeof("test"));
     }
 }
 
@@ -56,7 +56,7 @@ static void BM_logging(benchmark::State &state) {
     my_logger.setLogPattern("%{level} file %{file} function %{function} line %{line} %{message}");
 
     for (auto _ : state) {
-        Debug(my_logger, "test");
+        Debug(my_logger, "test", sizeof("test"));
     }
 }
 
@@ -70,7 +70,7 @@ static void BM_SingleMessage(benchmark::State &state) {
     my_logger.setLogPattern("%{message}");
 
     for (auto _ : state) {
-        Debug(my_logger, "test");
+        Debug(my_logger, "test", sizeof("test"));
     }
 }
 

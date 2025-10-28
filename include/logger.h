@@ -16,35 +16,35 @@
     #define LOG_CURRENT_FUNC __func__
 #endif
 
-#define Debug(LoggerType, message)                                                               \
+#define Debug(LoggerType, message, len)                                                          \
     if constexpr (LOGGER_LOG_DEBUG_ENABLED) {                                                    \
         LoggerType.log(Log::LogRecord{Log::level::DebugMsg, __FILE__, sizeof(__FILE__) - 1,      \
                                       LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
-                       message);                                                                 \
+                       message, len);                                                            \
     }
-#define Info(LoggerType, message)                                                                \
+#define Info(LoggerType, message, len)                                                           \
     if constexpr (LOGGER_LOG_INFO_ENABLED) {                                                     \
         LoggerType.log(Log::LogRecord{Log::level::InfoMsg, __FILE__, sizeof(__FILE__) - 1,       \
                                       LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
-                       message);                                                                 \
+                       message, len);                                                            \
     }
-#define Warning(LoggerType, message)                                                             \
+#define Warning(LoggerType, message, len)                                                        \
     if constexpr (LOGGER_LOG_WARNING_ENABLED) {                                                  \
         LoggerType.log(Log::LogRecord{Log::level::WarningMsg, __FILE__, sizeof(__FILE__) - 1,    \
                                       LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
-                       message);                                                                 \
+                       message, len);                                                            \
     }
-#define Error(LoggerType, message)                                                               \
+#define Error(LoggerType, message, len)                                                          \
     if constexpr (LOGGER_LOG_ERROR_ENABLED) {                                                    \
         LoggerType.log(Log::LogRecord{Log::level::ErrorMsg, __FILE__, sizeof(__FILE__) - 1,      \
                                       LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
-                       message);                                                                 \
+                       message, len);                                                            \
     }
-#define Fatal(LoggerType, message)                                                               \
+#define Fatal(LoggerType, message, len)                                                          \
     if constexpr (LOGGER_LOG_FATAL_ENABLED) {                                                    \
         LoggerType.log(Log::LogRecord{Log::level::FatalMsg, __FILE__, sizeof(__FILE__) - 1,      \
                                       LOG_CURRENT_FUNC, sizeof(LOG_CURRENT_FUNC) - 1, __LINE__}, \
-                       message);                                                                 \
+                       message, len);                                                            \
     }
 
 namespace Log {
@@ -65,6 +65,11 @@ public:
     }
 };
 
+/**
+ * @brief The LogRecord class
+ *
+ * Holds log data know in compile time
+ */
 struct LogRecord {
 public:
     const level msgType;
@@ -205,13 +210,13 @@ public:
      * Main logging function. Calls provided sinks and callbacks if enabled in `logger_config.h`.
      * All logging calls can be disabled in the same file.
      */
-    void log(const LogRecord &record, const char *str) const {
+    void log(const LogRecord &record, const char *str, size_t str_len) const {
         if (static_cast<int>(record.msgType) > logLevel) {
             return;
         }
 
         static thread_local char msg[LOGGER_MAX_STR_SIZE];
-        size_t msg_size = createMessage(msg, LOGGER_MAX_STR_SIZE, record, str);
+        size_t msg_size = createMessage(msg, LOGGER_MAX_STR_SIZE, record, str, str_len);
 
         if constexpr (ENABLE_SINKS) {
             send_to_all_sinks(record.msgType, msg, msg_size);
@@ -238,12 +243,56 @@ public:
     size_t createMessage(char *outBuf,
                          size_t bufSize,
                          const LogRecord &record,
-                         const char *str) const {
+                         const char *str,
+                         size_t str_len) const {
         size_t pos = 0;
 
         for (size_t i = 0; i < tokenOpsCount; i++) {
             append(pos, outBuf, bufSize, tokenOps[i].literal, tokenOps[i].literal_len);
-            tokenOps[i].handler(pos, outBuf, bufSize, record, str, data_provider_instance);
+            switch (tokenOps[i].type) {
+                case tokType::TokDate:
+                    tokDateHandler(pos, outBuf, bufSize, record, str, str_len,
+                                   data_provider_instance);
+                    break;
+                case tokType::TokTime:
+                    tokTimeHandler(pos, outBuf, bufSize, record, str, str_len,
+                                   data_provider_instance);
+                    break;
+                case tokType::TokLevel:
+                    tokLevelHandler(pos, outBuf, bufSize, record, str, str_len,
+                                    data_provider_instance);
+                    break;
+                case tokType::TokFile:
+                    tokFileHandler(pos, outBuf, bufSize, record, str, str_len,
+                                   data_provider_instance);
+                    break;
+                case tokType::TokThread:
+                    tokThreadHandler(pos, outBuf, bufSize, record, str, str_len,
+                                     data_provider_instance);
+                    break;
+                case tokType::TokFunc:
+                    tokFuncHandler(pos, outBuf, bufSize, record, str, str_len,
+                                   data_provider_instance);
+                    break;
+                case tokType::TokLine:
+                    tokLineHandler(pos, outBuf, bufSize, record, str, str_len,
+                                   data_provider_instance);
+                    break;
+                case tokType::TokPid:
+                    tokPidHandler(pos, outBuf, bufSize, record, str, str_len,
+                                  data_provider_instance);
+                    break;
+                case tokType::TokMessage:
+                    tokMessageHandler(pos, outBuf, bufSize, record, str, str_len,
+                                      data_provider_instance);
+                    break;
+                case tokType::TokInvalid:
+                    tokInvalidHandler(pos, outBuf, bufSize, record, str, str_len,
+                                      data_provider_instance);
+                    break;
+                default:
+                    break;
+            }
         }
 
         outBuf[pos] = '\0';
@@ -270,7 +319,7 @@ private:
                                     size_t bufSize,
                                     const LogRecord &record,
                                     const char *str,
-
+                                    size_t str_len,
                                     const TDataProvider &data_provider_instance);
 
     /**
@@ -285,7 +334,7 @@ private:
         const char *literal;
         /// length of  text that comes before token
         size_t literal_len;
-        /// function pointer
+        /// function pointer fallback, currently unused
         TokHandlerFunc handler;
     };
 
@@ -312,6 +361,7 @@ private:
                                [[maybe_unused]] size_t bufSize,
                                [[maybe_unused]] const LogRecord &record,
                                [[maybe_unused]] const char *str,
+                               [[maybe_unused]] size_t str_len,
                                const TDataProvider &data_provider_instance) {
         pos += data_provider_instance.getCurrentDate(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
     }
@@ -321,6 +371,7 @@ private:
                                [[maybe_unused]] size_t bufSize,
                                [[maybe_unused]] const LogRecord &record,
                                [[maybe_unused]] const char *str,
+                               [[maybe_unused]] size_t str_len,
                                const TDataProvider &data_provider_instance) {
         pos += data_provider_instance.getCurrentTime(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
     }
@@ -330,6 +381,7 @@ private:
                                  [[maybe_unused]] size_t bufSize,
                                  [[maybe_unused]] const LogRecord &record,
                                  [[maybe_unused]] const char *str,
+                                 [[maybe_unused]] size_t str_len,
                                  const TDataProvider &data_provider_instance) {
         pos += data_provider_instance.getThreadId(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
     }
@@ -339,6 +391,7 @@ private:
                               [[maybe_unused]] size_t bufSize,
                               [[maybe_unused]] const LogRecord &record,
                               [[maybe_unused]] const char *str,
+                              [[maybe_unused]] size_t str_len,
                               const TDataProvider &data_provider_instance) {
         pos += data_provider_instance.getProcessName(outBuf + pos, LOGGER_MAX_TEMP_SIZE);
     }
@@ -348,6 +401,7 @@ private:
                                 size_t bufSize,
                                 const LogRecord &record,
                                 [[maybe_unused]] const char *str,
+                                [[maybe_unused]] size_t str_len,
                                 [[maybe_unused]] const TDataProvider &data_provider_instance) {
         const char *ch = msg_log_types[static_cast<int>(record.msgType)];
         size_t len = msg_log_type_lengths[static_cast<int>(record.msgType)];
@@ -360,6 +414,7 @@ private:
                                size_t bufSize,
                                const LogRecord &record,
                                [[maybe_unused]] const char *str,
+                               [[maybe_unused]] size_t str_len,
                                [[maybe_unused]] const TDataProvider &data_provider_instance) {
         append(pos, outBuf, bufSize, record.file, record.file_len);
     }
@@ -369,15 +424,17 @@ private:
                                size_t bufSize,
                                const LogRecord &record,
                                [[maybe_unused]] const char *str,
+                               [[maybe_unused]] size_t str_len,
                                [[maybe_unused]] const TDataProvider &data_provider_instance) {
         append(pos, outBuf, bufSize, record.func, record.func_len);
     }
 
     static void tokLineHandler(size_t &pos,
                                char *outBuf,
-                               [[maybe_unused]] size_t bufSize,
+                               size_t bufSize,
                                const LogRecord &record,
                                [[maybe_unused]] const char *str,
+                               [[maybe_unused]] size_t str_len,
                                [[maybe_unused]] const TDataProvider &data_provider_instance) {
         char *tail = outBuf + pos;
         std::to_chars_result result = std::to_chars(tail, tail + (bufSize - pos), record.line);
@@ -388,10 +445,10 @@ private:
                                   char *outBuf,
                                   size_t bufSize,
                                   [[maybe_unused]] const LogRecord &record,
-                                  [[maybe_unused]] const char *str,
+                                  const char *str,
+                                  size_t str_len,
                                   [[maybe_unused]] const TDataProvider &data_provider_instance) {
-        size_t len = strnlen(str, LOGGER_MAX_MESSAGE_SIZE);
-        append(pos, outBuf, bufSize, str, len);
+        append(pos, outBuf, bufSize, str, str_len);
     }
 
     static void tokInvalidHandler([[maybe_unused]] size_t &pos,
@@ -399,6 +456,7 @@ private:
                                   [[maybe_unused]] size_t bufSize,
                                   [[maybe_unused]] const LogRecord &record,
                                   [[maybe_unused]] const char *str,
+                                  [[maybe_unused]] size_t str_len,
                                   [[maybe_unused]] const TDataProvider &data_provider_instance) {
         append(pos, outBuf, bufSize, "invalid token", sizeof("invalid token"));
     }
@@ -443,12 +501,12 @@ private:
     }
 
     int logLevel = 3;
-    /// holds all text before tokens found in `setLogPattern`. Token itself holds text that comes
-    /// before him, @see TokenOp
+    /// holds all text before tokens found in `setLogPattern`. Token itself holds legth and pointer
+    /// to text that comes before him, @see TokenOp
     char literalBuffer[LOGGER_LITERAL_BUFFER_SIZE] = {};
-    /// holds found tokens, so the output will look the same as `setLogPattern`
+    /// found tokens, so the output will look the same as `setLogPattern`
     TokenOp tokenOps[LOGGER_MAX_TOKENS] = {};
-    /// holds number of found tokens
+    /// number of found tokens
     size_t tokenOpsCount = 0;
 
     /// class that provides platform-dependent data
