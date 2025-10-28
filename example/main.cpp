@@ -14,6 +14,7 @@ void thread_func1(Log::Logger<DefaultDataProvider, ConsoleSink> &log) {
 
 void thread_func2(Log::Logger<DefaultDataProvider, ConsoleSink> &log) {
     for (int i = 0; i < 1000; i++) {
+        Info(log, "thread 2\n", sizeof("thread 2\n"));   // simple log
         Error(log, "thread 2\n", sizeof("thread 2\n"));  // simple log
     }
 }

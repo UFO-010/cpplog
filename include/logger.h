@@ -178,11 +178,11 @@ public:
             }
             literal_buffer_pos += literal_len;
 
-            auto token_len = static_cast<size_t>(brace_end + 1 - token_start);
+            auto token_len = static_cast<size_t>(brace_end - token_start + 1);
             tokType found_type = tokType::TokInvalid;
-
+            std::string_view token_sv(token_start, token_len);
             for (size_t i = 0; i < tokens.size(); ++i) {
-                if (strncmp(token_start, tokens[i].data(), token_len) == 0) {
+                if (tokens[i].size() == token_len && token_sv == tokens[i]) {
                     found_type = static_cast<tokType>(i);
                     break;
                 }
