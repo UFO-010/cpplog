@@ -8,6 +8,7 @@
 #include <string_view>
 
 #include "logger_config.h"
+#include "default_provider.h"
 
 #if defined(__GNUC__) || defined(__clang__)
     #define LOG_CURRENT_FUNC __PRETTY_FUNCTION__
@@ -98,11 +99,14 @@ public:
  *
  * Main logging class. Uses DataProvider implemented by user to get platform-specific data.
  */
-template <typename TDataProvider, typename... TSinkTypes>
+template <typename PlatformTag = Platform::BaseTraits,
+          typename TDataProvider = DefaultDataProvider,
+          typename... TSinkTypes>
 class Logger {
+    using Traits = Log::Platform::Traits<PlatformTag>;
+
 public:
-    explicit Logger(const TDataProvider &provider = TDataProvider{},
-                    TSinkTypes... sink_args) noexcept
+    Logger(const TDataProvider &provider, TSinkTypes... sink_args) noexcept
         : data_provider_instance(provider),
           sinks_tuple(sink_args...) {
         setLogPattern("%{level}: %{message}");  // default pattern
@@ -146,7 +150,7 @@ public:
         const char *start_of_literal = p;
         char *literal = literalBuffer.data();
 
-        while (*p != '\0' && tokenOpsCount < LOGGER_MAX_TOKENS) {
+        while (*p != '\0' && tokenOpsCount < Traits::LOGGER_MAX_TOKENS) {
             if (*p != '%') {
                 ++p;
                 continue;
@@ -164,11 +168,11 @@ public:
 
             auto literal_len = static_cast<size_t>(token_start - start_of_literal);
 
-            if (literal_buffer_pos + literal_len > LOGGER_LITERAL_BUFFER_SIZE) {
-                literal_len = LOGGER_LITERAL_BUFFER_SIZE - literal_buffer_pos;
+            if (literal_buffer_pos + literal_len > Traits::LOGGER_LITERAL_BUFFER_SIZE) {
+                literal_len = Traits::LOGGER_LITERAL_BUFFER_SIZE - literal_buffer_pos;
             }
 
-            if (literal_buffer_pos >= LOGGER_LITERAL_BUFFER_SIZE) {
+            if (literal_buffer_pos >= Traits::LOGGER_LITERAL_BUFFER_SIZE) {
                 break;
             }
 
@@ -221,16 +225,18 @@ public:
             return;
         }
 
-        static thread_local char msg[LOGGER_MAX_STR_SIZE];
-        size_t msg_size = createMessage(msg, LOGGER_MAX_STR_SIZE, record, str, str_len);
+        // static thread_local char msg[Traits::LOGGER_MAX_STR_SIZE];
+        std::array<char, Traits::LOGGER_MAX_STR_SIZE> msg;
+        size_t msg_size =
+            createMessage(msg.data(), Traits::LOGGER_MAX_STR_SIZE, record, str, str_len);
 
-        if constexpr (ENABLE_SINKS) {
-            send_to_all_sinks(record.msgType, msg, msg_size);
+        if constexpr (Traits::ENABLE_SINKS) {
+            send_to_all_sinks(record.msgType, msg.data(), msg_size);
         }
 
-        if constexpr (ENABLE_PRINT_CALLBACK) {
+        if constexpr (Traits::ENABLE_PRINT_CALLBACK) {
             if (userHandler != nullptr) {
-                userHandler(record.msgType, msg, msg_size);
+                userHandler(record.msgType, msg.data(), msg_size);
             }
         }
     }
@@ -509,9 +515,9 @@ private:
     int logLevel = 3;
     /// holds all text before tokens found in `setLogPattern`. Token itself holds legth and pointer
     /// to text that comes before him, @see TokenOp
-    std::array<char, LOGGER_LITERAL_BUFFER_SIZE> literalBuffer = {};
+    std::array<char, Traits::LOGGER_LITERAL_BUFFER_SIZE> literalBuffer = {};
     /// found tokens, so the output will look the same as `setLogPattern`
-    std::array<TokenOp, LOGGER_MAX_TOKENS> tokenOps = {};
+    std::array<TokenOp, Traits::LOGGER_MAX_TOKENS> tokenOps = {};
     /// number of found tokens
     size_t tokenOpsCount = 0;
 
