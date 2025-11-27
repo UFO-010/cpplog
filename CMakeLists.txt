@@ -13,7 +13,6 @@ target_compile_features(${PROJECT_NAME}_compiler_flags INTERFACE cxx_std_17)
 add_library(logger INTERFACE
   "${CMAKE_CURRENT_LIST_DIR}/include/logger.h"
   "${CMAKE_CURRENT_LIST_DIR}/include/console_sink.h"
-  "${CMAKE_CURRENT_LIST_DIR}/include/stream_logger.h"
   "${CMAKE_CURRENT_LIST_DIR}/include/logger_config.h"
   "${CMAKE_CURRENT_LIST_DIR}/include/default_provider.h"
   "${CMAKE_CURRENT_LIST_DIR}/include/desktop_provider.h"
