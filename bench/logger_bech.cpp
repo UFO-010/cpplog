@@ -2,6 +2,8 @@
 #include <benchmark/benchmark.h>
 #include "logger.h"
 
+using MyConfig = Log::Platform::Traits<Log::Platform::Default>;
+
 class NullSink : public Log::ILogSink<NullSink> {
 public:
     void send(const Log::level &, const char *, size_t) const {
@@ -9,24 +11,29 @@ public:
     }
 };
 
-class EmptyProvider {
+struct Empty {};
+
+template <>
+class PlatformDataProvider<Empty> : public DefaultDataProvider {
 public:
-    size_t getProcessName(char *, size_t) const { return 0; }
+    PlatformDataProvider() = default;
 
-    size_t getThreadId(char *, size_t) const { return 0; }
+    size_t getProcessName(char *, size_t) const final { return 0; }
 
-    size_t getCurrentDate(char *, size_t) const { return 0; }
+    size_t getThreadId(char *, size_t) const final { return 0; }
 
-    size_t getCurrentTime(char *, size_t) const { return 0; }
+    size_t getCurrentDate(char *, size_t) const final { return 0; }
+
+    size_t getCurrentTime(char *, size_t) const final { return 0; }
 };
 
 static void BM_CreateMessage(benchmark::State &state) {
-    const EmptyProvider emptyProvider;
+    const PlatformDataProvider<Empty> emptyProvider;
     const NullSink nullSink;
     Log::Logger my_logger(emptyProvider, nullSink);
     my_logger.setLogPattern("%{level} file %{file} function %{function} line %{line} %{message}");
 
-    std::array<char, LOGGER_MAX_STR_SIZE> buf_ar = {};
+    std::array<char, MyConfig::LOGGER_MAX_STR_SIZE> buf_ar = {};
     char *buf = buf_ar.data();
     size_t buf_size = buf_ar.size();
 
@@ -49,7 +56,7 @@ static void BM_CreateMessage(benchmark::State &state) {
 BENCHMARK(BM_CreateMessage);
 
 static void BM_Stdprint(benchmark::State &state) {
-    std::array<char, LOGGER_MAX_STR_SIZE> buf_ar = {};
+    std::array<char, MyConfig::LOGGER_MAX_STR_SIZE> buf_ar = {};
     char *buf = buf_ar.data();
     size_t buf_size = buf_ar.size();
 
@@ -71,7 +78,7 @@ static void BM_Stdprint(benchmark::State &state) {
 BENCHMARK(BM_Stdprint);
 
 static void BM_logging(benchmark::State &state) {
-    const EmptyProvider emptyProvider;
+    const PlatformDataProvider<Empty> emptyProvider;
     const NullSink nullSink;
     Log::Logger my_logger(emptyProvider, nullSink);
     my_logger.setLogLevel(Log::level::DebugMsg);
@@ -88,7 +95,7 @@ static void BM_logging(benchmark::State &state) {
 BENCHMARK(BM_logging);
 
 static void BM_SingleMessage(benchmark::State &state) {
-    const EmptyProvider emptyProvider;
+    const PlatformDataProvider<Empty> emptyProvider;
     const NullSink nullSink;
     Log::Logger my_logger(emptyProvider, nullSink);
     my_logger.setLogLevel(Log::level::DebugMsg);

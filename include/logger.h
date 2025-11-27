@@ -99,7 +99,7 @@ public:
  *
  * Main logging class. Uses DataProvider implemented by user to get platform-specific data.
  */
-template <typename PlatformTag = Platform::BaseTraits,
+template <typename PlatformTag = Platform::Traits<Platform::Default>,
           typename TDataProvider = DefaultDataProvider,
           typename... TSinkTypes>
 class Logger {

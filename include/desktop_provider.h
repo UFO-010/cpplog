@@ -27,7 +27,7 @@ class PlatformDataProvider<Desktop> : public DefaultDataProvider {
 public:
     PlatformDataProvider() { getCurrentProcessName(); }
 
-    size_t getProcessName(char *buffer, size_t bufferSize) const override {
+    size_t getProcessName(char *buffer, size_t bufferSize) const final {
         size_t size = current_process.size();
         if (size >= bufferSize) {
             return 0;
@@ -36,7 +36,7 @@ public:
         return size;
     }
 
-    size_t getThreadId(char *buffer, size_t bufferSize) const override {
+    size_t getThreadId(char *buffer, size_t bufferSize) const final {
 #if defined(__linux__)
         auto tid = static_cast<pid_t>(syscall(SYS_gettid));
         int len = std::snprintf(buffer, bufferSize, "%d", tid);
@@ -52,7 +52,7 @@ public:
 #endif
     }
 
-    size_t getCurrentDate(char *buffer, size_t bufferSize) const override {
+    size_t getCurrentDate(char *buffer, size_t bufferSize) const final {
         time_t timestamp = 0;
         time(&timestamp);
         struct tm datetime = {};
@@ -64,7 +64,7 @@ public:
         return 0;
     }
 
-    size_t getCurrentTime(char *buffer, size_t bufferSize) const override {
+    size_t getCurrentTime(char *buffer, size_t bufferSize) const final {
         time_t timestamp = 0;
         time(&timestamp);
         struct tm datetime = {};

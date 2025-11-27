@@ -6,6 +6,8 @@
 
 class DefaultDataProvider {
 public:
+    virtual ~DefaultDataProvider() = default;
+
     virtual size_t getProcessName([[maybe_unused]] char *buffer,
                                   [[maybe_unused]] size_t bufferSize) const {
         return 0;
