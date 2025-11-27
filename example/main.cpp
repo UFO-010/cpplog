@@ -25,8 +25,7 @@ void thread_func2(Log::Logger<MyConfig, PlatformDataProvider<Desktop>, ConsoleSi
 int main() {
     const PlatformDataProvider<Desktop> defaultDataProvider;  // example simple data provider
     const ConsoleSink consoleSink;  // example sink that prints data to console
-    Log::Logger<MyConfig, PlatformDataProvider<Desktop>, ConsoleSink> myLogger(defaultDataProvider,
-                                                                               consoleSink);
+    Log::Logger myLogger(defaultDataProvider, consoleSink);
 
     consoleSink.colorize(true);
     myLogger.setLogLevel(Log::level::DebugMsg);  // set minimum logging level
