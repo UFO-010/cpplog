@@ -3,7 +3,7 @@
 
 #include <cstddef>
 
-namespace Log::Platform {
+namespace Log::Config {
 struct BaseTraits {
     /// Maximum number of sinks to place logger data
     static constexpr int LOGGER_MAX_SINKS = 4;
@@ -24,7 +24,7 @@ struct BaseTraits {
     static constexpr bool ENABLE_SINKS = true;  // sinks enabled by default
 };
 
-template <typename PlatformTag>
+template <typename ConfigTag>
 struct Traits : BaseTraits {};
 
 struct Default {};
@@ -32,8 +32,12 @@ struct Default {};
 template <>
 struct Traits<Default> : public BaseTraits {};
 
-}  // namespace Log::Platform
+}  // namespace Log::Config
 
+/**
+ * @brief LOGGER_MAX_LEVEL
+ * @todo Move that variable to `BaseTraits` and rework macros for compile-time logging level checks
+ */
 static constexpr int LOGGER_MAX_LEVEL = 4;  // Debug by default
 
 /// Macros to check logging level during preprocess. Silences logging levels even if setup level in

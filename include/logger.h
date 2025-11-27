@@ -99,14 +99,14 @@ public:
  *
  * Main logging class. Uses DataProvider implemented by user to get platform-specific data.
  */
-template <typename PlatformTag = Platform::Traits<Platform::Default>,
+template <typename ConfigTag = Config::Traits<Config::Default>,
           typename TDataProvider = DefaultDataProvider,
           typename... TSinkTypes>
 class Logger {
-    using Traits = Log::Platform::Traits<PlatformTag>;
+    using Traits = Log::Config::Traits<ConfigTag>;
 
 public:
-    Logger(const TDataProvider &provider, TSinkTypes... sink_args) noexcept
+    explicit Logger(const TDataProvider &provider, TSinkTypes... sink_args) noexcept
         : data_provider_instance(provider),
           sinks_tuple(sink_args...) {
         setLogPattern("%{level}: %{message}");  // default pattern
@@ -192,13 +192,7 @@ public:
                 }
             }
 
-            TokHandlerFunc handler = getTokHandler(found_type);
-
-            if (handler == nullptr) {
-                return false;
-            }
-
-            tokenOps[tokenOpsCount] = {found_type, dest, literal_len, handler};
+            tokenOps[tokenOpsCount] = {found_type, dest, literal_len};
             ++tokenOpsCount;
             p = brace_end + 1;
             start_of_literal = p;
@@ -225,7 +219,6 @@ public:
             return;
         }
 
-        // static thread_local char msg[Traits::LOGGER_MAX_STR_SIZE];
         std::array<char, Traits::LOGGER_MAX_STR_SIZE> msg;
         size_t msg_size =
             createMessage(msg.data(), Traits::LOGGER_MAX_STR_SIZE, record, str, str_len);
@@ -346,8 +339,6 @@ private:
         const char *literal;
         /// length of  text that comes before token
         size_t literal_len;
-        /// function pointer fallback, currently unused
-        TokHandlerFunc handler;
     };
 
     /**
@@ -471,45 +462,6 @@ private:
                                   [[maybe_unused]] size_t str_len,
                                   [[maybe_unused]] const TDataProvider &data_provider_instance) {
         append(pos, outBuf, bufSize, "invalid token", sizeof("invalid token"));
-    }
-
-    TokHandlerFunc getTokHandler(const tokType &type) {
-        TokHandlerFunc handler = nullptr;
-        switch (type) {
-            case tokType::TokDate:
-                handler = tokDateHandler;
-                break;
-            case tokType::TokTime:
-                handler = tokTimeHandler;
-                break;
-            case tokType::TokLevel:
-                handler = tokLevelHandler;
-                break;
-            case tokType::TokFile:
-                handler = tokFileHandler;
-                break;
-            case tokType::TokThread:
-                handler = tokThreadHandler;
-                break;
-            case tokType::TokFunc:
-                handler = tokFuncHandler;
-                break;
-            case tokType::TokLine:
-                handler = tokLineHandler;
-                break;
-            case tokType::TokPid:
-                handler = tokPidHandler;
-                break;
-            case tokType::TokMessage:
-                handler = tokMessageHandler;
-                break;
-            case tokType::TokInvalid:
-                handler = tokInvalidHandler;
-                break;
-            default:
-                break;
-        }
-        return handler;
     }
 
     int logLevel = 3;

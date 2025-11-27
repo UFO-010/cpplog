@@ -6,7 +6,7 @@
 #include "../include/console_sink.h"
 #include "../include/desktop_provider.h"
 
-using MyConfig = Log::Platform::Traits<Log::Platform::Default>;
+using MyConfig = Log::Config::Traits<Log::Config::Default>;
 
 void thread_func1(Log::Logger<MyConfig, PlatformDataProvider<Desktop>, ConsoleSink> &log) {
     for (int i = 0; i < 1000; i++) {
