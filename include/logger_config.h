@@ -3,6 +3,18 @@
 
 #include <cstddef>
 
+namespace Log {
+
+enum class level : int {
+    FatalMsg = 0,
+    ErrorMsg = 1,
+    WarningMsg = 2,
+    InfoMsg = 3,
+    DebugMsg = 4,
+};
+
+}  // namespace Log
+
 namespace Log::Config {
 struct BaseTraits {
     /// Maximum number of sinks to place logger data
@@ -22,6 +34,16 @@ struct BaseTraits {
     static constexpr bool ENABLE_PRINT_CALLBACK = false;  // callback disabled by default
     /// Enables sinks to print log messages during compile time
     static constexpr bool ENABLE_SINKS = true;  // sinks enabled by default
+
+    static constexpr int LOGGER_MAX_LEVEL = 4;  // Debug by default
+
+    /// Check logging level during preprocess. Silences logging levels even if setup level in
+    /// code is another. Printing log via direct call of log function still can be performed.
+    static constexpr bool FATAL_ENABLED = LOGGER_MAX_LEVEL >= static_cast<int>(level::FatalMsg);
+    static constexpr bool ERROR_ENABLED = LOGGER_MAX_LEVEL >= static_cast<int>(level::ErrorMsg);
+    static constexpr bool WARNING_ENABLED = LOGGER_MAX_LEVEL >= static_cast<int>(level::WarningMsg);
+    static constexpr bool INFO_ENABLED = LOGGER_MAX_LEVEL >= static_cast<int>(level::InfoMsg);
+    static constexpr bool DEBUG_ENABLED = LOGGER_MAX_LEVEL >= static_cast<int>(level::DebugMsg);
 };
 
 template <typename ConfigTag>
@@ -33,19 +55,5 @@ template <>
 struct Traits<Default> : public BaseTraits {};
 
 }  // namespace Log::Config
-
-/**
- * @brief LOGGER_MAX_LEVEL
- * @todo Move that variable to `BaseTraits` and rework macros for compile-time logging level checks
- */
-static constexpr int LOGGER_MAX_LEVEL = 4;  // Debug by default
-
-/// Macros to check logging level during preprocess. Silences logging levels even if setup level in
-/// code is another. Printing log via direct call of log function still can be performed.
-#define LOGGER_LOG_DEBUG_ENABLED (LOGGER_MAX_LEVEL >= 4)
-#define LOGGER_LOG_INFO_ENABLED (LOGGER_MAX_LEVEL >= 3)
-#define LOGGER_LOG_WARNING_ENABLED (LOGGER_MAX_LEVEL >= 2)
-#define LOGGER_LOG_ERROR_ENABLED (LOGGER_MAX_LEVEL >= 1)
-#define LOGGER_LOG_FATAL_ENABLED (LOGGER_MAX_LEVEL >= 0)
 
 #endif

@@ -18,51 +18,18 @@
     #define LOG_CURRENT_FUNC __func__
 #endif
 
-#define Debug(LoggerType, message, len)                                                           \
-    if constexpr (LOGGER_LOG_DEBUG_ENABLED) {                                                     \
-        constexpr std::string_view file_sv = __FILE__;                                            \
-        constexpr std::string_view func_sv = LOG_CURRENT_FUNC;                                    \
-        LoggerType.log(Log::LogRecord{Log::level::DebugMsg, file_sv, func_sv, __LINE__}, message, \
-                       len);                                                                      \
-    }
-#define Info(LoggerType, message, len)                                                           \
-    if constexpr (LOGGER_LOG_INFO_ENABLED) {                                                     \
-        constexpr std::string_view file_sv = __FILE__;                                           \
-        constexpr std::string_view func_sv = LOG_CURRENT_FUNC;                                   \
-        LoggerType.log(Log::LogRecord{Log::level::InfoMsg, file_sv, func_sv, __LINE__}, message, \
-                       len);                                                                     \
-    }
-#define Warning(LoggerType, message, len)                                                  \
-    if constexpr (LOGGER_LOG_WARNING_ENABLED) {                                            \
-        constexpr std::string_view file_sv = __FILE__;                                     \
-        constexpr std::string_view func_sv = LOG_CURRENT_FUNC;                             \
-        LoggerType.log(Log::LogRecord{Log::level::WarningMsg, file_sv, func_sv, __LINE__}, \
-                       message, len);                                                      \
-    }
-#define Error(LoggerType, message, len)                                                           \
-    if constexpr (LOGGER_LOG_ERROR_ENABLED) {                                                     \
-        constexpr std::string_view file_sv = __FILE__;                                            \
-        constexpr std::string_view func_sv = LOG_CURRENT_FUNC;                                    \
-        LoggerType.log(Log::LogRecord{Log::level::ErrorMsg, file_sv, func_sv, __LINE__}, message, \
-                       len);                                                                      \
-    }
-#define Fatal(LoggerType, message, len)                                                           \
-    if constexpr (LOGGER_LOG_FATAL_ENABLED) {                                                     \
-        constexpr std::string_view file_sv = __FILE__;                                            \
-        constexpr std::string_view func_sv = LOG_CURRENT_FUNC;                                    \
-        LoggerType.log(Log::LogRecord{Log::level::FatalMsg, file_sv, func_sv, __LINE__}, message, \
-                       len);                                                                      \
-    }
+#define Debug(LoggerType, message, len) \
+    LoggerType.debug(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__);
+#define Info(LoggerType, message, len) \
+    LoggerType.info(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__);
+#define Warning(LoggerType, message, len) \
+    LoggerType.warning(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__);
+#define Error(LoggerType, message, len) \
+    LoggerType.error(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__);
+#define Fatal(LoggerType, message, len) \
+    LoggerType.fatal(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__);
 
 namespace Log {
-
-enum class level : int {
-    FatalMsg = 0,
-    ErrorMsg = 1,
-    WarningMsg = 2,
-    InfoMsg = 3,
-    DebugMsg = 4,
-};
 
 template <typename ConcreteSink>
 class ILogSink {
@@ -82,12 +49,12 @@ public:
     const level msgType;
     const std::string_view file;
     const std::string_view func;
-    const int line;
+    const size_t line;
 
     constexpr LogRecord(const level v_msgType,
-                        const std::string_view v_file,
+                        const std::string_view &v_file,
                         const std::string_view &v_func,
-                        int v_line) noexcept
+                        size_t v_line) noexcept
         : msgType(v_msgType),
           file(v_file),
           func(v_func),
@@ -103,7 +70,7 @@ template <typename ConfigTag = Config::Traits<Config::Default>,
           typename TDataProvider = DefaultDataProvider,
           typename... TSinkTypes>
 class Logger {
-    using Traits = Log::Config::Traits<ConfigTag>;
+    using TConfig = Log::Config::Traits<ConfigTag>;
 
 public:
     explicit Logger(const TDataProvider &provider, TSinkTypes... sink_args) noexcept
@@ -150,7 +117,7 @@ public:
         const char *start_of_literal = p;
         char *literal = literalBuffer.data();
 
-        while (*p != '\0' && tokenOpsCount < Traits::LOGGER_MAX_TOKENS) {
+        while (*p != '\0' && tokenOpsCount < TConfig::LOGGER_MAX_TOKENS) {
             if (*p != '%') {
                 ++p;
                 continue;
@@ -168,11 +135,11 @@ public:
 
             auto literal_len = static_cast<size_t>(token_start - start_of_literal);
 
-            if (literal_buffer_pos + literal_len > Traits::LOGGER_LITERAL_BUFFER_SIZE) {
-                literal_len = Traits::LOGGER_LITERAL_BUFFER_SIZE - literal_buffer_pos;
+            if (literal_buffer_pos + literal_len > TConfig::LOGGER_LITERAL_BUFFER_SIZE) {
+                literal_len = TConfig::LOGGER_LITERAL_BUFFER_SIZE - literal_buffer_pos;
             }
 
-            if (literal_buffer_pos >= Traits::LOGGER_LITERAL_BUFFER_SIZE) {
+            if (literal_buffer_pos >= TConfig::LOGGER_LITERAL_BUFFER_SIZE) {
                 break;
             }
 
@@ -206,6 +173,76 @@ public:
         userHandler = _handler;
     }
 
+    template <typename... Args>
+    void fatal(const char *str,
+               size_t str_len,
+               const std::string_view &file,
+               const std::string_view &func,
+               const size_t line) const {
+        if constexpr (TConfig::FATAL_ENABLED) {
+            if (logLevel > static_cast<int>(level::FatalMsg)) {
+                LogRecord record{level::FatalMsg, file, func, line};
+                log(record, str, str_len);
+            }
+        }
+    }
+
+    template <typename... Args>
+    void error(const char *str,
+               size_t str_len,
+               const std::string_view &file,
+               const std::string_view &func,
+               const size_t line) const {
+        if constexpr (TConfig::FATAL_ENABLED) {
+            if (logLevel > static_cast<int>(level::ErrorMsg)) {
+                LogRecord record{level::ErrorMsg, file, func, line};
+                log(record, str, str_len);
+            }
+        }
+    }
+
+    template <typename... Args>
+    void warning(const char *str,
+                 size_t str_len,
+                 const std::string_view &file,
+                 const std::string_view &func,
+                 const size_t line) const {
+        if constexpr (TConfig::FATAL_ENABLED) {
+            if (logLevel > static_cast<int>(level::WarningMsg)) {
+                LogRecord record{level::WarningMsg, file, func, line};
+                log(record, str, str_len);
+            }
+        }
+    }
+
+    template <typename... Args>
+    void info(const char *str,
+              size_t str_len,
+              const std::string_view &file,
+              const std::string_view &func,
+              const size_t line) const {
+        if constexpr (TConfig::FATAL_ENABLED) {
+            if (logLevel > static_cast<int>(level::InfoMsg)) {
+                LogRecord record{level::InfoMsg, file, func, line};
+                log(record, str, str_len);
+            }
+        }
+    }
+
+    template <typename... Args>
+    void debug(const char *str,
+               size_t str_len,
+               const std::string_view &file,
+               const std::string_view &func,
+               const size_t line) const {
+        if constexpr (TConfig::FATAL_ENABLED) {
+            if (logLevel > static_cast<int>(level::DebugMsg)) {
+                LogRecord record{level::DebugMsg, file, func, line};
+                log(record, str, str_len);
+            }
+        }
+    }
+
     /**
      * @brief log
      * @param record holds logging context
@@ -215,19 +252,19 @@ public:
      * All logging calls can be disabled in the same file.
      */
     void log(const LogRecord &record, const char *str, size_t str_len) const {
-        if (static_cast<int>(record.msgType) > logLevel) {
-            return;
-        }
+        // if (static_cast<int>(record.msgType) > logLevel) {
+        //     return;
+        // }
 
-        std::array<char, Traits::LOGGER_MAX_STR_SIZE> msg;
+        std::array<char, TConfig::LOGGER_MAX_STR_SIZE> msg;
         size_t msg_size =
-            createMessage(msg.data(), Traits::LOGGER_MAX_STR_SIZE, record, str, str_len);
+            createMessage(msg.data(), TConfig::LOGGER_MAX_STR_SIZE, record, str, str_len);
 
-        if constexpr (Traits::ENABLE_SINKS) {
+        if constexpr (TConfig::ENABLE_SINKS) {
             send_to_all_sinks(record.msgType, msg.data(), msg_size);
         }
 
-        if constexpr (Traits::ENABLE_PRINT_CALLBACK) {
+        if constexpr (TConfig::ENABLE_PRINT_CALLBACK) {
             if (userHandler != nullptr) {
                 userHandler(record.msgType, msg.data(), msg_size);
             }
@@ -459,9 +496,9 @@ private:
     int logLevel = 3;
     /// holds all text before tokens found in `setLogPattern`. Token itself holds legth and pointer
     /// to text that comes before him, @see TokenOp
-    std::array<char, Traits::LOGGER_LITERAL_BUFFER_SIZE> literalBuffer = {};
+    std::array<char, TConfig::LOGGER_LITERAL_BUFFER_SIZE> literalBuffer = {};
     /// found tokens, so the output will look the same as `setLogPattern`
-    std::array<TokenOp, Traits::LOGGER_MAX_TOKENS> tokenOps = {};
+    std::array<TokenOp, TConfig::LOGGER_MAX_TOKENS> tokenOps = {};
     /// number of found tokens
     size_t tokenOpsCount = 0;
 

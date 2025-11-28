@@ -2,7 +2,7 @@
 #include <benchmark/benchmark.h>
 #include "logger.h"
 
-using MyConfig = Log::Platform::Traits<Log::Platform::Default>;
+using MyConfig = Log::Config::Traits<Log::Config::Default>;
 
 class NullSink : public Log::ILogSink<NullSink> {
 public:
