@@ -6,6 +6,7 @@
 #include <tuple>
 #include <array>
 #include <string_view>
+#include <functional>
 
 #include "logger_config.h"
 #include "default_provider.h"
@@ -73,6 +74,8 @@ class Logger {
     using TConfig = Log::Config::Traits<ConfigTag>;
 
 public:
+    using CallbackType = std::function<void(const level, const char *, size_t)>;
+
     explicit Logger(const TDataProvider &provider, TSinkTypes... sink_args) noexcept
         : data_provider_instance(provider),
           sinks_tuple(sink_args...) {
@@ -167,11 +170,7 @@ public:
         return true;
     }
 
-    void setUserHandler(void (*_handler)(const level msgType,
-                                         const char *message,
-                                         size_t msg_size)) {
-        userHandler = _handler;
-    }
+    void setUserHandler(CallbackType _handler) { userHandler = _handler; }
 
     template <typename... Args>
     void fatal(const char *str,
@@ -527,7 +526,7 @@ private:
     }
 
     /// user callback to print logging message
-    void (*userHandler)(const level msgType, const char *message, size_t msg_size) = nullptr;
+    CallbackType userHandler;
 
     /// types of logging level, added to output message
     static constexpr std::array<std::string_view, 5> msg_log_types = {"FATAL", "ERROR", "WARN",
