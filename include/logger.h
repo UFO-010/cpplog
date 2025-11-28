@@ -509,23 +509,6 @@ private:
 
     /**
      * @brief send_to_all_sinks
-     * @param msgType
-     * @param data
-     * @param size
-     * @return
-     *
-     * No sinks left, do nothing
-     */
-    template <std::size_t I = 0>
-    inline typename std::enable_if<I == sizeof...(TSinkTypes), void>::type send_to_all_sinks(
-        [[maybe_unused]] const level &msgType,
-        [[maybe_unused]] const char *data,
-        [[maybe_unused]] size_t size) const {
-        // no sinks left, do nothing
-    }
-
-    /**
-     * @brief send_to_all_sinks
      * @param msgType log level
      * @param data log message
      * @param size size of log message
@@ -534,14 +517,13 @@ private:
      * Recursively send log message to all user sinks
      */
     template <std::size_t I = 0>
-        inline typename std::enable_if <
-        I<sizeof...(TSinkTypes), void>::type send_to_all_sinks(const level &msgType,
-                                                               const char *data,
-                                                               size_t size) const {
-        // call current sink
-        std::get<I>(sinks_tuple).send(msgType, data, size);
-        // call next sink
-        send_to_all_sinks<I + 1>(msgType, data, size);
+    inline void send_to_all_sinks(const level &msgType, const char *data, size_t size) const {
+        if constexpr (I < sizeof...(TSinkTypes)) {
+            // call current sink
+            std::get<I>(sinks_tuple).send(msgType, data, size);
+            // call next sink
+            send_to_all_sinks<I + 1>(msgType, data, size);
+        }
     }
 
     /// user callback to print logging message
