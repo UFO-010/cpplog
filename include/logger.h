@@ -20,15 +20,15 @@
 #endif
 
 #define Debug(LoggerType, message, len) \
-    LoggerType.debug(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__);
+    LoggerType.debug(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__)
 #define Info(LoggerType, message, len) \
-    LoggerType.info(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__);
+    LoggerType.info(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__)
 #define Warning(LoggerType, message, len) \
-    LoggerType.warning(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__);
+    LoggerType.warning(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__)
 #define Error(LoggerType, message, len) \
-    LoggerType.error(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__);
+    LoggerType.error(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__)
 #define Fatal(LoggerType, message, len) \
-    LoggerType.fatal(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__);
+    LoggerType.fatal(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__)
 
 namespace Log {
 
@@ -170,7 +170,7 @@ public:
         return true;
     }
 
-    void setUserHandler(CallbackType _handler) { userHandler = _handler; }
+    void setUserHandler(const CallbackType &_handler) { userHandler = _handler; }
 
     template <typename... Args>
     void fatal(const char *str,
@@ -251,10 +251,6 @@ public:
      * All logging calls can be disabled in the same file.
      */
     void log(const LogRecord &record, const char *str, size_t str_len) const {
-        // if (static_cast<int>(record.msgType) > logLevel) {
-        //     return;
-        // }
-
         std::array<char, TConfig::LOGGER_MAX_STR_SIZE> msg;
         size_t msg_size =
             createMessage(msg.data(), TConfig::LOGGER_MAX_STR_SIZE, record, str, str_len);
