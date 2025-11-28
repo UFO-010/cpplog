@@ -319,14 +319,6 @@ private:
         TokInvalid
     };
 
-    using TokHandlerFunc = void (*)(size_t &pos,
-                                    char *outBuf,
-                                    size_t bufSize,
-                                    const LogRecord &record,
-                                    const char *str,
-                                    size_t str_len,
-                                    const TDataProvider &data_provider_instance);
-
     /**
      * @brief The TokenOp class
      *
