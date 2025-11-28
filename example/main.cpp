@@ -6,16 +6,16 @@
 #include "../include/console_sink.h"
 #include "../include/desktop_provider.h"
 
-using MyConfig = Log::Platform::Traits<Log::Platform::Default>;
+using MyConfig = Log::Config::Traits<Log::Config::Default>;
 
-void thread_func1(Log::Logger<MyConfig, PlatformDataProvider<Desktop>, ConsoleSink> &log) {
+void thread_func1(Log::Logger<MyConfig, PlatformDataProvider<Desktop>, ConsoleSink> const &log) {
     for (int i = 0; i < 1000; i++) {
         Warning(log, "thread 1\n", sizeof("thread 1\n"));  // simple log
         Fatal(log, "thread 1\n", sizeof("thread 1\n"));    // simple log
     }
 }
 
-void thread_func2(Log::Logger<MyConfig, PlatformDataProvider<Desktop>, ConsoleSink> &log) {
+void thread_func2(Log::Logger<MyConfig, PlatformDataProvider<Desktop>, ConsoleSink> const &log) {
     for (int i = 0; i < 1000; i++) {
         Info(log, "thread 2\n", sizeof("thread 2\n"));   // simple log
         Error(log, "thread 2\n", sizeof("thread 2\n"));  // simple log
