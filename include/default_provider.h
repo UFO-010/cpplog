@@ -1,12 +1,13 @@
 
-#ifndef DEFAULTPROVIDER_H
-#define DEFAULTPROVIDER_H
+#pragma once
 
 #include <cstddef>
 
-class DefaultDataProvider {
+namespace Log {
+
+class IDataProvider {
 public:
-    virtual ~DefaultDataProvider() = default;
+    virtual ~IDataProvider() = default;
 
     virtual size_t getProcessName([[maybe_unused]] char *buffer,
                                   [[maybe_unused]] size_t bufferSize) const {
@@ -30,6 +31,11 @@ public:
 };
 
 template <typename PlatformTag>
-class PlatformDataProvider : public DefaultDataProvider {};
+class TDataProvider : public IDataProvider {};
 
-#endif
+struct Default {};
+
+template <>
+class TDataProvider<Default> : public IDataProvider {};
+
+}  // namespace Log

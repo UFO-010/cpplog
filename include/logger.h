@@ -10,6 +10,7 @@
 
 #include "logger_config.h"
 #include "default_provider.h"
+#include "message.h"
 
 #if defined(__GNUC__) || defined(__clang__)
     #define LOG_CURRENT_FUNC __PRETTY_FUNCTION__
@@ -41,25 +42,27 @@ public:
 };
 
 /**
- * @brief The LogRecord class
+ * @brief The IMessageQueue class
  *
- * Holds log data know in compile time
+ * Class that store data captured in hot path and should be processed in background
  */
-struct LogRecord {
-public:
-    const level msgType;
-    const std::string_view file;
-    const std::string_view func;
-    const size_t line;
+template <typename ConcreteQueue, typename TConfig = Config::Traits<Config::Default>>
+class IMessageQueue {
+    using ConfigType = TConfig;
+    using MessageType = LogMessage<TConfig>;
 
-    constexpr LogRecord(const level v_msgType,
-                        const std::string_view &v_file,
-                        const std::string_view &v_func,
-                        size_t v_line) noexcept
-        : msgType(v_msgType),
-          file(v_file),
-          func(v_func),
-          line(v_line) {}
+public:
+    ~IMessageQueue() = default;
+
+    bool enqueue(const MessageType &msg) {
+        return static_cast<ConcreteQueue *>(this)->enqueueImpl(msg);
+    }
+
+    bool dequeue(MessageType &msg) { return static_cast<ConcreteQueue *>(this)->dequeueImpl(msg); }
+
+    bool dequeueBlocking(MessageType &msg, unsigned long timeout_ms = 0) {
+        return static_cast<ConcreteQueue *>(this)->dequeueBlockingImpl(msg, timeout_ms);
+    }
 };
 
 /**
@@ -68,7 +71,7 @@ public:
  * Main logging class. Uses DataProvider implemented by user to get platform-specific data.
  */
 template <typename ConfigTag = Config::Traits<Config::Default>,
-          typename TDataProvider = DefaultDataProvider,
+          typename TDataProvider = TDataProvider<Default>,
           typename... TSinkTypes>
 class Logger {
     using TConfig = Log::Config::Traits<ConfigTag>;

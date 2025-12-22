@@ -23,6 +23,7 @@ struct BaseTraits {
     static constexpr size_t LOGGER_MAX_STR_SIZE = 512;
     /// Maximum length of logger input message
     static constexpr size_t LOGGER_MAX_MESSAGE_SIZE = 256;
+    static constexpr size_t LOGGER_MAX_FORMAT_SIZE = 128;
     /// Maximum length of string to place numbers
     static constexpr size_t LOGGER_MAX_NUMBUF_SIZE = 12;
     /// Maximum number of tokens to search in log message pattern

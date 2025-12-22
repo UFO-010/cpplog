@@ -1,5 +1,5 @@
-#ifndef CONSOLESYNC_H
-#define CONSOLESYNC_H
+
+#pragma once
 
 #include "logger.h"
 #include <iostream>
@@ -98,5 +98,3 @@ private:
     mutable bool colors_enabled = true;
     mutable bool ansi_cols_support = true;
 };
-
-#endif

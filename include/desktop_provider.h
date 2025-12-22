@@ -23,9 +23,9 @@
 struct Desktop {};
 
 template <>
-class PlatformDataProvider<Desktop> : public DefaultDataProvider {
+class Log::TDataProvider<Desktop> : public IDataProvider {
 public:
-    PlatformDataProvider() { getCurrentProcessName(); }
+    TDataProvider() { getCurrentProcessName(); }
 
     size_t getProcessName(char *buffer, size_t bufferSize) const final {
         size_t size = current_process.size();
