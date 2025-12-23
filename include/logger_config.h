@@ -21,8 +21,9 @@ struct BaseTraits {
     static constexpr int LOGGER_MAX_SINKS = 4;
     /// Maximum length of output string
     static constexpr size_t LOGGER_MAX_STR_SIZE = 512;
-    /// Maximum length of logger input message
+    /// Maximum length of logger input user message
     static constexpr size_t LOGGER_MAX_MESSAGE_SIZE = 256;
+    /// Maximum length of logger input user format specifier
     static constexpr size_t LOGGER_MAX_FORMAT_SIZE = 128;
     /// Maximum length of string to place numbers
     static constexpr size_t LOGGER_MAX_NUMBUF_SIZE = 12;

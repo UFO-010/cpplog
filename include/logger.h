@@ -37,7 +37,7 @@ template <typename ConcreteSink>
 class ILogSink {
 public:
     void send(const level msgType, const char *data, size_t size) const {
-        static_cast<ConcreteSink *>(this)->sendImpl(msgType, data, size);
+        static_cast<const ConcreteSink *>(this)->sendImpl(msgType, data, size);
     }
 };
 
@@ -69,10 +69,13 @@ public:
  * @brief The Logger class
  *
  * Main logging class. Uses DataProvider implemented by user to get platform-specific data.
+ *
+ * @todo Add queue interface to implement async work
  */
-template <typename ConfigTag = Config::Traits<Config::Default>,
-          typename TDataProvider = TDataProvider<Default>,
-          typename... TSinkTypes>
+template <  // typename TMessageQueue,
+    typename ConfigTag = Config::Traits<Config::Default>,
+    typename TDataProvider = TDataProvider<Default>,
+    typename... TSinkTypes>
 class Logger {
     using TConfig = Log::Config::Traits<ConfigTag>;
 
@@ -175,7 +178,6 @@ public:
 
     void setUserHandler(const CallbackType &_handler) { userHandler = _handler; }
 
-    template <typename... Args>
     void fatal(const char *str,
                size_t str_len,
                const std::string_view &file,
@@ -189,7 +191,6 @@ public:
         }
     }
 
-    template <typename... Args>
     void error(const char *str,
                size_t str_len,
                const std::string_view &file,
@@ -203,7 +204,6 @@ public:
         }
     }
 
-    template <typename... Args>
     void warning(const char *str,
                  size_t str_len,
                  const std::string_view &file,
@@ -217,7 +217,6 @@ public:
         }
     }
 
-    template <typename... Args>
     void info(const char *str,
               size_t str_len,
               const std::string_view &file,
@@ -231,7 +230,6 @@ public:
         }
     }
 
-    template <typename... Args>
     void debug(const char *str,
                size_t str_len,
                const std::string_view &file,
@@ -502,6 +500,8 @@ private:
 
     /// class that provides platform-dependent data
     TDataProvider data_provider_instance;
+
+    // TMessageQueue &queue;
     /// holds sinks to send log messages to
     std::tuple<TSinkTypes...> sinks_tuple;
 

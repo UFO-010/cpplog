@@ -16,6 +16,7 @@ add_library(logger INTERFACE
   "${CMAKE_CURRENT_LIST_DIR}/include/logger_config.h"
   "${CMAKE_CURRENT_LIST_DIR}/include/default_provider.h"
   "${CMAKE_CURRENT_LIST_DIR}/include/desktop_provider.h"
+  "${CMAKE_CURRENT_LIST_DIR}/include/freertos_provider.h"
   "${CMAKE_CURRENT_LIST_DIR}/include/message.h"
 )
 
