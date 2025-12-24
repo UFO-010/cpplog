@@ -41,11 +41,11 @@ struct LogMessage {
     using TConfig = Log::Config::Traits<ConfigTag>;
 
     LogRecord record;
-    unsigned long timestamp;
 
-    std::array<char, TConfig::LOGGER_MAX_FORMAT_SIZE> format_string;
-    std::array<char, TConfig::LOGGER_MAX_MESSAGE_SIZE> user_data;
+    std::array<char, TConfig::LOGGER_MAX_FORMAT_SIZE> user_data;
     size_t user_data_len;
+
+    long long timestamp;
 };
 
 }  // namespace Log

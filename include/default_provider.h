@@ -3,39 +3,54 @@
 
 #include <cstddef>
 
+#include "message.h"
+
 namespace Log {
 
-class IDataProvider {
+/**
+ * @brief The IMessageQueue class
+ *
+ * Class that store data captured in hot path and should be processed in background
+ */
+template <typename Derived, typename TConfig = Config::Traits<Config::Default>>
+class IMessageQueue {
+    using ConfigType = TConfig;
+    using MessageType = LogMessage<TConfig>;
+
 public:
-    virtual ~IDataProvider() = default;
+    ~IMessageQueue() = default;
 
-    virtual size_t getProcessName([[maybe_unused]] char *buffer,
-                                  [[maybe_unused]] size_t bufferSize) const {
-        return 0;
-    }
+    bool enqueue(const MessageType &msg) { return static_cast<Derived *>(this)->enqueueImpl(msg); }
 
-    virtual size_t getThreadId([[maybe_unused]] char *buffer,
-                               [[maybe_unused]] size_t bufferSize) const {
-        return 0;
-    }
+    bool dequeue(MessageType &msg) { return static_cast<Derived *>(this)->dequeueImpl(msg); }
 
-    virtual size_t getCurrentDate([[maybe_unused]] char *buffer,
-                                  [[maybe_unused]] size_t bufferSize) const {
-        return 0;
-    }
-
-    virtual size_t getCurrentTime([[maybe_unused]] char *buffer,
-                                  [[maybe_unused]] size_t bufferSize) const {
-        return 0;
+    bool dequeueBlocking(MessageType &msg, unsigned long timeout_ms = 0) {
+        return static_cast<Derived *>(this)->dequeueBlockingImpl(msg, timeout_ms);
     }
 };
 
-template <typename PlatformTag>
-class TDataProvider : public IDataProvider {};
+template <typename Derived>
+class IContextProvider {
+public:
+    size_t getProcessName([[maybe_unused]] char *buffer, [[maybe_unused]] size_t bufferSize) const {
+        return static_cast<const Derived *>(this)->getProcessNameImpl(buffer, bufferSize);
+    }
 
-struct Default {};
+    size_t getThreadId([[maybe_unused]] char *buffer, [[maybe_unused]] size_t bufferSize) const {
+        return static_cast<const Derived *>(this)->getThreadIdImpl(buffer, bufferSize);
+    }
 
-template <>
-class TDataProvider<Default> : public IDataProvider {};
+    size_t getCurrentDate([[maybe_unused]] char *buffer, [[maybe_unused]] size_t bufferSize) const {
+        return static_cast<const Derived *>(this)->getCurrentDateImpl(buffer, bufferSize);
+    }
+
+    size_t getCurrentTime([[maybe_unused]] char *buffer, [[maybe_unused]] size_t bufferSize) const {
+        return static_cast<const Derived *>(this)->getCurrentTimeImpl(buffer, bufferSize);
+    }
+
+    long long getTimestamp() const {
+        return static_cast<const Derived *>(this)->getTimeStampImpl();
+    }
+};
 
 }  // namespace Log

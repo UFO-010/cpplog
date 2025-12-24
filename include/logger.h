@@ -8,8 +8,10 @@
 #include <string_view>
 #include <functional>
 
+/// @todo remplace with shrunked fmtlib
+#include <format>
+
 #include "logger_config.h"
-#include "default_provider.h"
 #include "message.h"
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -20,48 +22,23 @@
     #define LOG_CURRENT_FUNC __func__
 #endif
 
-#define Debug(LoggerType, message, len) \
-    LoggerType.debug(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__)
-#define Info(LoggerType, message, len) \
-    LoggerType.info(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__)
-#define Warning(LoggerType, message, len) \
-    LoggerType.warning(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__)
-#define Error(LoggerType, message, len) \
-    LoggerType.error(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__)
-#define Fatal(LoggerType, message, len) \
-    LoggerType.fatal(message, len, __FILE__, LOG_CURRENT_FUNC, __LINE__)
+#define Debug(LoggerType, fmt, ...) \
+    LoggerType.debug(fmt, __FILE__, LOG_CURRENT_FUNC, __LINE__, ##__VA_ARGS__)
+#define Info(LoggerType, fmt, ...) \
+    LoggerType.info(fmt, __FILE__, LOG_CURRENT_FUNC, __LINE__, ##__VA_ARGS__)
+#define Warning(LoggerType, fmt, ...) \
+    LoggerType.warning(fmt, __FILE__, LOG_CURRENT_FUNC, __LINE__, ##__VA_ARGS__)
+#define Error(LoggerType, fmt, ...) \
+    LoggerType.error(fmt, __FILE__, LOG_CURRENT_FUNC, __LINE__, ##__VA_ARGS__)
+#define Fatal(LoggerType, fmt, ...) \
+    LoggerType.fatal(fmt, __FILE__, LOG_CURRENT_FUNC, __LINE__, ##__VA_ARGS__)
 
 namespace Log {
-
-template <typename ConcreteSink>
+template <typename Derived>
 class ILogSink {
 public:
     void send(const level msgType, const char *data, size_t size) const {
-        static_cast<const ConcreteSink *>(this)->sendImpl(msgType, data, size);
-    }
-};
-
-/**
- * @brief The IMessageQueue class
- *
- * Class that store data captured in hot path and should be processed in background
- */
-template <typename ConcreteQueue, typename TConfig = Config::Traits<Config::Default>>
-class IMessageQueue {
-    using ConfigType = TConfig;
-    using MessageType = LogMessage<TConfig>;
-
-public:
-    ~IMessageQueue() = default;
-
-    bool enqueue(const MessageType &msg) {
-        return static_cast<ConcreteQueue *>(this)->enqueueImpl(msg);
-    }
-
-    bool dequeue(MessageType &msg) { return static_cast<ConcreteQueue *>(this)->dequeueImpl(msg); }
-
-    bool dequeueBlocking(MessageType &msg, unsigned long timeout_ms = 0) {
-        return static_cast<ConcreteQueue *>(this)->dequeueBlockingImpl(msg, timeout_ms);
+        static_cast<const Derived *>(this)->sendImpl(msgType, data, size);
     }
 };
 
@@ -72,17 +49,15 @@ public:
  *
  * @todo Add queue interface to implement async work
  */
-template <  // typename TMessageQueue,
-    typename ConfigTag = Config::Traits<Config::Default>,
-    typename TDataProvider = TDataProvider<Default>,
-    typename... TSinkTypes>
+template <typename TContextProvider,
+          typename ConfigTag = Config::Traits<Config::Default>,
+          typename... TSinkTypes>
 class Logger {
-    using TConfig = Log::Config::Traits<ConfigTag>;
-
 public:
+    using TConfig = Log::Config::Traits<ConfigTag>;
     using CallbackType = std::function<void(const level, const char *, size_t)>;
 
-    explicit Logger(const TDataProvider &provider, TSinkTypes... sink_args) noexcept
+    explicit Logger(const TContextProvider &provider, TSinkTypes... sink_args) noexcept
         : data_provider_instance(provider),
           sinks_tuple(sink_args...) {
         setLogPattern("%{level}: %{message}");  // default pattern
@@ -178,155 +153,183 @@ public:
 
     void setUserHandler(const CallbackType &_handler) { userHandler = _handler; }
 
-    void fatal(const char *str,
-               size_t str_len,
+    /**
+     * @brief fatal
+     * @todo replace std after moving to fmt
+     */
+    template <typename... Args>
+    void fatal(const std::format_string<Args...> &fmt,
                const std::string_view &file,
                const std::string_view &func,
-               const size_t line) const {
+               const size_t line,
+               Args &&...args) const {
         if constexpr (TConfig::FATAL_ENABLED) {
             if (logLevel > static_cast<int>(level::FatalMsg)) {
-                LogRecord record{level::FatalMsg, file, func, line};
-                log(record, str, str_len);
+                LogMessage<TConfig> msg{
+                    .record{level::FatalMsg, file, func, line},
+                    .user_data = {},
+                    .user_data_len = std::formatted_size(fmt, std::forward<Args>(args)...),
+                    .timestamp = data_provider_instance.getTimestamp()};
+
+                std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                                 std::forward<Args>(args)...);
+                log(msg);
             }
         }
     }
 
-    void error(const char *str,
-               size_t str_len,
+    template <typename... Args>
+    void error(const std::format_string<Args...> &fmt,
                const std::string_view &file,
                const std::string_view &func,
-               const size_t line) const {
+               const size_t line,
+               Args &&...args) const {
         if constexpr (TConfig::FATAL_ENABLED) {
             if (logLevel > static_cast<int>(level::ErrorMsg)) {
-                LogRecord record{level::ErrorMsg, file, func, line};
-                log(record, str, str_len);
+                LogMessage<TConfig> msg{
+                    .record{level::ErrorMsg, file, func, line},
+                    .user_data = {},
+                    .user_data_len = std::formatted_size(fmt, std::forward<Args>(args)...),
+                    .timestamp = data_provider_instance.getTimestamp()};
+
+                std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                                 std::forward<Args>(args)...);
+                log(msg);
             }
         }
     }
 
-    void warning(const char *str,
-                 size_t str_len,
+    template <typename... Args>
+    void warning(const std::format_string<Args...> &fmt,
                  const std::string_view &file,
                  const std::string_view &func,
-                 const size_t line) const {
+                 const size_t line,
+                 Args &&...args) const {
         if constexpr (TConfig::FATAL_ENABLED) {
             if (logLevel > static_cast<int>(level::WarningMsg)) {
-                LogRecord record{level::WarningMsg, file, func, line};
-                log(record, str, str_len);
+                LogMessage<TConfig> msg{
+                    .record{level::WarningMsg, file, func, line},
+                    .user_data = {},
+                    .user_data_len = std::formatted_size(fmt, std::forward<Args>(args)...),
+                    .timestamp = data_provider_instance.getTimestamp()};
+
+                std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                                 std::forward<Args>(args)...);
+                log(msg);
             }
         }
     }
 
-    void info(const char *str,
-              size_t str_len,
+    template <typename... Args>
+    void info(const std::format_string<Args...> &fmt,
               const std::string_view &file,
               const std::string_view &func,
-              const size_t line) const {
+              const size_t line,
+              Args &&...args) const {
         if constexpr (TConfig::FATAL_ENABLED) {
             if (logLevel > static_cast<int>(level::InfoMsg)) {
-                LogRecord record{level::InfoMsg, file, func, line};
-                log(record, str, str_len);
+                LogMessage<TConfig> msg{
+                    .record{level::InfoMsg, file, func, line},
+                    .user_data = {},
+                    .user_data_len = std::formatted_size(fmt, std::forward<Args>(args)...),
+                    .timestamp = data_provider_instance.getTimestamp()};
+
+                std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                                 std::forward<Args>(args)...);
+                log(msg);
             }
         }
     }
 
-    void debug(const char *str,
-               size_t str_len,
+    template <typename... Args>
+    void debug(const std::format_string<Args...> fmt,
                const std::string_view &file,
                const std::string_view &func,
-               const size_t line) const {
+               const size_t line,
+               Args &&...args) const {
         if constexpr (TConfig::FATAL_ENABLED) {
             if (logLevel > static_cast<int>(level::DebugMsg)) {
-                LogRecord record{level::DebugMsg, file, func, line};
-                log(record, str, str_len);
+                LogMessage<TConfig> msg{
+                    .record{level::DebugMsg, file, func, line},
+                    .user_data = {},
+                    .user_data_len = std::formatted_size(fmt, std::forward<Args>(args)...),
+                    .timestamp = data_provider_instance.getTimestamp()};
+
+                std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                                 std::forward<Args>(args)...);
+                log(msg);
             }
         }
     }
 
     /**
      * @brief log
-     * @param record holds logging context
-     * @param str input string to print in log message
+     * @param msg
      *
-     * Main logging function. Calls provided sinks and callbacks if enabled in `logger_config.h`.
-     * All logging calls can be disabled in the same file.
+     * Main logging function. Calls provided sinks and callbacks if enabled in
+     * `logger_config.h`. All logging calls can be disabled in the same file.
      */
-    void log(const LogRecord &record, const char *str, size_t str_len) const {
-        std::array<char, TConfig::LOGGER_MAX_STR_SIZE> msg;
-        size_t msg_size =
-            createMessage(msg.data(), TConfig::LOGGER_MAX_STR_SIZE, record, str, str_len);
+    void log(const LogMessage<TConfig> &msg) const {
+        std::array<char, TConfig::LOGGER_MAX_STR_SIZE> finaL_msg;
+        size_t msg_size = createMessage(finaL_msg.data(), msg);
 
         if constexpr (TConfig::ENABLE_SINKS) {
-            send_to_all_sinks(record.msgType, msg.data(), msg_size);
+            send_to_all_sinks(msg.record.msgType, finaL_msg.data(), msg_size);
         }
 
         if constexpr (TConfig::ENABLE_PRINT_CALLBACK) {
             if (userHandler != nullptr) {
-                userHandler(record.msgType, msg.data(), msg_size);
+                userHandler(msg.record.msgType, finaL_msg.data(), msg_size);
             }
         }
     }
 
-    /**
-     * @brief createMessage
-     * @param outBuf poitner to output buffer
-     * @param bufSize max size of output buffer
-     * @param record holds logging context
-     * @param str input string to print in log message
-     * @return length of formatted log message
-     *
-     * Creates log message with specified in @brief setMessagePattern
-     * view and put it into `outBuf` and control it's size with `bufSize`.
-     */
-    size_t createMessage(char *outBuf,
-                         size_t bufSize,
-                         const LogRecord &record,
-                         const char *str,
-                         size_t str_len) const {
+    size_t createMessage(char *outBuf, const LogMessage<TConfig> &msg) const {
         size_t pos = 0;
+        size_t bufSize = TConfig::LOGGER_MAX_STR_SIZE;
 
         for (size_t i = 0; i < tokenOpsCount; i++) {
             append(pos, outBuf, bufSize, tokenOps[i].literal, tokenOps[i].literal_len);
             switch (tokenOps[i].type) {
                 case tokType::TokDate:
-                    tokDateHandler(pos, outBuf, bufSize, record, str, str_len,
-                                   data_provider_instance);
+                    tokDateHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
+                                   msg.user_data_len, data_provider_instance);
                     break;
                 case tokType::TokTime:
-                    tokTimeHandler(pos, outBuf, bufSize, record, str, str_len,
-                                   data_provider_instance);
+                    tokTimeHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
+                                   msg.user_data_len, data_provider_instance);
                     break;
                 case tokType::TokLevel:
-                    tokLevelHandler(pos, outBuf, bufSize, record, str, str_len,
-                                    data_provider_instance);
+                    tokLevelHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
+                                    msg.user_data_len, data_provider_instance);
                     break;
                 case tokType::TokFile:
-                    tokFileHandler(pos, outBuf, bufSize, record, str, str_len,
-                                   data_provider_instance);
+                    tokFileHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
+                                   msg.user_data_len, data_provider_instance);
                     break;
                 case tokType::TokThread:
-                    tokThreadHandler(pos, outBuf, bufSize, record, str, str_len,
-                                     data_provider_instance);
+                    tokThreadHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
+                                     msg.user_data_len, data_provider_instance);
                     break;
                 case tokType::TokFunc:
-                    tokFuncHandler(pos, outBuf, bufSize, record, str, str_len,
-                                   data_provider_instance);
+                    tokFuncHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
+                                   msg.user_data_len, data_provider_instance);
                     break;
                 case tokType::TokLine:
-                    tokLineHandler(pos, outBuf, bufSize, record, str, str_len,
-                                   data_provider_instance);
+                    tokLineHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
+                                   msg.user_data_len, data_provider_instance);
                     break;
                 case tokType::TokPid:
-                    tokPidHandler(pos, outBuf, bufSize, record, str, str_len,
-                                  data_provider_instance);
+                    tokPidHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
+                                  msg.user_data_len, data_provider_instance);
                     break;
                 case tokType::TokMessage:
-                    tokMessageHandler(pos, outBuf, bufSize, record, str, str_len,
-                                      data_provider_instance);
+                    tokMessageHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
+                                      msg.user_data_len, data_provider_instance);
                     break;
                 case tokType::TokInvalid:
-                    tokInvalidHandler(pos, outBuf, bufSize, record, str, str_len,
-                                      data_provider_instance);
+                    tokInvalidHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
+                                      msg.user_data_len, data_provider_instance);
                     break;
                 default:
                     break;
@@ -374,7 +377,8 @@ private:
      * @param data string to place in buffer
      * @param dataLen string length
      *
-     * Places string in buffer in needed position and increase `pos` to `dataLen` if data is placed.
+     * Places string in buffer in needed position and increase `pos` to `dataLen` if data is
+     * placed.
      */
     static void append(
         size_t &pos, char *outBuf, size_t bufSize, const char *data, size_t dataLen) {
@@ -390,7 +394,7 @@ private:
                                [[maybe_unused]] const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] size_t str_len,
-                               const TDataProvider &data_provider_instance) {
+                               const TContextProvider &data_provider_instance) {
         pos += data_provider_instance.getCurrentDate(outBuf + pos, bufSize - pos);
     }
 
@@ -400,7 +404,7 @@ private:
                                [[maybe_unused]] const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] size_t str_len,
-                               const TDataProvider &data_provider_instance) {
+                               const TContextProvider &data_provider_instance) {
         pos += data_provider_instance.getCurrentTime(outBuf + pos, bufSize - pos);
     }
 
@@ -410,7 +414,7 @@ private:
                                  [[maybe_unused]] const LogRecord &record,
                                  [[maybe_unused]] const char *str,
                                  [[maybe_unused]] size_t str_len,
-                                 const TDataProvider &data_provider_instance) {
+                                 const TContextProvider &data_provider_instance) {
         pos += data_provider_instance.getThreadId(outBuf + pos, bufSize - pos);
     }
 
@@ -420,7 +424,7 @@ private:
                               [[maybe_unused]] const LogRecord &record,
                               [[maybe_unused]] const char *str,
                               [[maybe_unused]] size_t str_len,
-                              const TDataProvider &data_provider_instance) {
+                              const TContextProvider &data_provider_instance) {
         pos += data_provider_instance.getProcessName(outBuf + pos, bufSize - pos);
     }
 
@@ -430,7 +434,7 @@ private:
                                 const LogRecord &record,
                                 [[maybe_unused]] const char *str,
                                 [[maybe_unused]] size_t str_len,
-                                [[maybe_unused]] const TDataProvider &data_provider_instance) {
+                                [[maybe_unused]] const TContextProvider &data_provider_instance) {
         const char *ch = msg_log_types[static_cast<int>(record.msgType)].data();
         size_t len = msg_log_types[static_cast<int>(record.msgType)].size();
 
@@ -443,7 +447,7 @@ private:
                                const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] size_t str_len,
-                               [[maybe_unused]] const TDataProvider &data_provider_instance) {
+                               [[maybe_unused]] const TContextProvider &data_provider_instance) {
         append(pos, outBuf, bufSize, record.file.data(), record.file.size());
     }
 
@@ -453,7 +457,7 @@ private:
                                const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] size_t str_len,
-                               [[maybe_unused]] const TDataProvider &data_provider_instance) {
+                               [[maybe_unused]] const TContextProvider &data_provider_instance) {
         append(pos, outBuf, bufSize, record.func.data(), record.func.size());
     }
 
@@ -463,7 +467,7 @@ private:
                                const LogRecord &record,
                                [[maybe_unused]] const char *str,
                                [[maybe_unused]] size_t str_len,
-                               [[maybe_unused]] const TDataProvider &data_provider_instance) {
+                               [[maybe_unused]] const TContextProvider &data_provider_instance) {
         char *tail = outBuf + pos;
         std::to_chars_result result = std::to_chars(tail, tail + (bufSize - pos), record.line);
         pos += result.ptr - tail;
@@ -475,7 +479,7 @@ private:
                                   [[maybe_unused]] const LogRecord &record,
                                   const char *str,
                                   size_t str_len,
-                                  [[maybe_unused]] const TDataProvider &data_provider_instance) {
+                                  [[maybe_unused]] const TContextProvider &data_provider_instance) {
         append(pos, outBuf, bufSize, str, str_len);
     }
 
@@ -485,13 +489,13 @@ private:
                                   [[maybe_unused]] const LogRecord &record,
                                   [[maybe_unused]] const char *str,
                                   [[maybe_unused]] size_t str_len,
-                                  [[maybe_unused]] const TDataProvider &data_provider_instance) {
+                                  [[maybe_unused]] const TContextProvider &data_provider_instance) {
         append(pos, outBuf, bufSize, "invalid token", sizeof("invalid token"));
     }
 
     int logLevel = 3;
-    /// holds all text before tokens found in `setLogPattern`. Token itself holds legth and pointer
-    /// to text that comes before him, @see TokenOp
+    /// holds all text before tokens found in `setLogPattern`. Token itself holds legth and
+    /// pointer to text that comes before him, @see TokenOp
     std::array<char, TConfig::LOGGER_LITERAL_BUFFER_SIZE> literalBuffer = {};
     /// found tokens, so the output will look the same as `setLogPattern`
     std::array<TokenOp, TConfig::LOGGER_MAX_TOKENS> tokenOps = {};
@@ -499,7 +503,7 @@ private:
     size_t tokenOpsCount = 0;
 
     /// class that provides platform-dependent data
-    TDataProvider data_provider_instance;
+    TContextProvider data_provider_instance;
 
     // TMessageQueue &queue;
     /// holds sinks to send log messages to
