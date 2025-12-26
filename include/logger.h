@@ -8,8 +8,8 @@
 #include <string_view>
 #include <functional>
 
-/// @todo remplace with shrunked fmtlib
-#include <format>
+#define FMT_THROW(x) abort()
+#include "fmt/base.h"
 
 #include "logger_config.h"
 #include "message.h"
@@ -68,6 +68,7 @@ public:
     Logger &operator=(const Logger &) = delete;
     Logger(Logger &&) = delete;
     Logger &operator=(Logger &&) = delete;
+    ~Logger() = default;
 
     /**
      * @brief setLogLevel
@@ -156,10 +157,9 @@ public:
 
     /**
      * @brief fatal
-     * @todo replace std after moving to fmt
      */
     template <typename... Args>
-    void fatal(const std::format_string<Args...> &fmt,
+    void fatal(const fmt::format_string<Args...> &fmt,
                const std::string_view &file,
                const std::string_view &func,
                const size_t line,
@@ -171,7 +171,7 @@ public:
                                         .user_data_len = 0,
                                         .timestamp = data_provider_instance.getTimestamp()};
 
-                auto res = std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                auto res = fmt::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
                                             std::forward<Args>(args)...);
                 msg.user_data_len = res.size;
                 log(msg);
@@ -180,7 +180,7 @@ public:
     }
 
     template <typename... Args>
-    void error(const std::format_string<Args...> &fmt,
+    void error(const fmt::format_string<Args...> &fmt,
                const std::string_view &file,
                const std::string_view &func,
                const size_t line,
@@ -192,7 +192,7 @@ public:
                                         .user_data_len = 0,
                                         .timestamp = data_provider_instance.getTimestamp()};
 
-                auto res = std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                auto res = fmt::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
                                             std::forward<Args>(args)...);
                 msg.user_data_len = res.size;
                 log(msg);
@@ -201,7 +201,7 @@ public:
     }
 
     template <typename... Args>
-    void warning(const std::format_string<Args...> &fmt,
+    void warning(const fmt::format_string<Args...> &fmt,
                  const std::string_view &file,
                  const std::string_view &func,
                  const size_t line,
@@ -213,7 +213,7 @@ public:
                                         .user_data_len = 0,
                                         .timestamp = data_provider_instance.getTimestamp()};
 
-                auto res = std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                auto res = fmt::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
                                             std::forward<Args>(args)...);
                 msg.user_data_len = res.size;
                 log(msg);
@@ -222,7 +222,7 @@ public:
     }
 
     template <typename... Args>
-    void info(const std::format_string<Args...> &fmt,
+    void info(const fmt::format_string<Args...> &fmt,
               const std::string_view &file,
               const std::string_view &func,
               const size_t line,
@@ -234,7 +234,7 @@ public:
                                         .user_data_len = 0,
                                         .timestamp = data_provider_instance.getTimestamp()};
 
-                auto res = std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                auto res = fmt::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
                                             std::forward<Args>(args)...);
                 msg.user_data_len = res.size;
                 log(msg);
@@ -243,7 +243,7 @@ public:
     }
 
     template <typename... Args>
-    void debug(const std::format_string<Args...> &fmt,
+    void debug(const fmt::format_string<Args...> &fmt,
                const std::string_view &file,
                const std::string_view &func,
                const size_t line,
@@ -255,7 +255,7 @@ public:
                                         .user_data_len = 0,
                                         .timestamp = data_provider_instance.getTimestamp()};
 
-                auto res = std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                auto res = fmt::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
                                             std::forward<Args>(args)...);
                 msg.user_data_len = res.size;
                 log(msg);
@@ -443,9 +443,10 @@ private:
                                size_t bufSize,
                                const TMessage &msg,
                                [[maybe_unused]] const TContextProvider &data_provider_instance) {
-        char *tail = outBuf + pos;
-        std::to_chars_result result = std::to_chars(tail, tail + (bufSize - pos), msg.record.line);
-        pos += result.ptr - tail;
+        char *first = outBuf + pos;
+        char *last = first + (bufSize - pos);
+        std::to_chars_result result = std::to_chars(first, last, msg.record.line);
+        pos += result.ptr - first;
     }
 
     static void tokMessageHandler(size_t &pos,
@@ -476,7 +477,6 @@ private:
     /// class that provides platform-dependent data
     TContextProvider data_provider_instance;
 
-    // TMessageQueue &queue;
     /// holds sinks to send log messages to
     std::tuple<TSinkTypes...> sinks_tuple;
 
@@ -490,7 +490,7 @@ private:
      * Recursively send log message to all user sinks
      */
     template <std::size_t I = 0>
-    inline void send_to_all_sinks(const level &msgType, const char *data, size_t size) const {
+    void send_to_all_sinks(const level &msgType, const char *data, size_t size) const {
         if constexpr (I < sizeof...(TSinkTypes)) {
             // call current sink
             std::get<I>(sinks_tuple).send(msgType, data, size);
