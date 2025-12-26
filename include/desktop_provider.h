@@ -6,6 +6,8 @@
 #include <ctime>
 #include <fstream>
 
+#include "fmt/base.h"
+
 #if defined(__linux__) || defined(__APPLE__)
     #include <sys/syscall.h>
     #include <unistd.h>
@@ -42,8 +44,8 @@ public:
     size_t getThreadIdImpl(char *buffer, size_t bufferSize) const {
 #if defined(__linux__)
         auto tid = static_cast<pid_t>(syscall(SYS_gettid));
-        int len = std::snprintf(buffer, bufferSize, "%d", tid);
-        return static_cast<size_t>(len);
+        auto res = fmt::format_to_n(buffer, bufferSize, "{:d}", tid);
+        return res.size;
 #elif defined(_WIN32)
         DWORD tid = GetCurrentThreadId();
         int len = std::snprintf(buffer, bufferSize, "%lu", static_cast<unsigned long>(tid));

@@ -5,6 +5,8 @@
 #include <iostream>
 #include <vector>
 
+#include "fmt/base.h"
+
 enum class ansi_cols : int {
     DEBUG_COLOR = 0,
     INFO_COLOR = 1,
@@ -20,15 +22,10 @@ public:
 
     void sendImpl(const Log::level msgType, const char *data, size_t size) const {
         if (ansi_cols_support && colors_enabled) {
-            std::string colorized_msg;
             auto reset_pos = static_cast<size_t>(ansi_cols::RESET_COLOR);
+            auto color_pos = static_cast<size_t>(msgType);
 
-            colorized_msg.reserve((msg_colors[reset_pos].size() * 2) + size);
-            colorized_msg.append(msg_colors[static_cast<size_t>(msgType)]);
-            colorized_msg.append(data);
-            colorized_msg.append(msg_colors[reset_pos]);
-
-            std::cout << colorized_msg;
+            fmt::print("{:s}{:s}{:s}", msg_colors[color_pos], data, msg_colors[reset_pos]);
             return;
         }
 

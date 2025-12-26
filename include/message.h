@@ -15,10 +15,10 @@ namespace Log {
  */
 struct LogRecord {
 public:
-    const level msgType;
-    const std::string_view file;
-    const std::string_view func;
-    const size_t line;
+    level msgType;
+    std::string_view file;
+    std::string_view func;
+    size_t line;
 
     constexpr LogRecord(const level v_msgType,
                         const std::string_view &v_file,
@@ -42,10 +42,10 @@ struct LogMessage {
 
     LogRecord record;
 
-    std::array<char, TConfig::LOGGER_MAX_FORMAT_SIZE> user_data;
-    size_t user_data_len;
+    std::array<char, TConfig::LOGGER_MAX_FORMAT_SIZE> user_data = {};
+    size_t user_data_len = 0;
 
-    long timestamp;
+    long timestamp = 0;
 };
 
 }  // namespace Log
