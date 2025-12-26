@@ -24,7 +24,11 @@ class DesktopContext : public Log::IContextProvider<DesktopContext> {
 public:
     DesktopContext() { getCurrentProcessName(); }
 
-    long long getTimeStampImpl() const { return 0; }
+    long long getTimestampImpl() const {
+        time_t timestamp = 0;
+        time(&timestamp);
+        return timestamp;
+    }
 
     size_t getProcessNameImpl(char *buffer, size_t bufferSize) const {
         size_t size = current_process.size();
@@ -63,9 +67,7 @@ public:
         return 0;
     }
 
-    size_t getCurrentTimeImpl(char *buffer, size_t bufferSize) const {
-        time_t timestamp = 0;
-        time(&timestamp);
+    size_t formatTimeImpl(char *buffer, size_t bufferSize, const long timestamp) const {
         struct tm datetime = {};
 
         if (localtime_r(&timestamp, &datetime) != nullptr) {

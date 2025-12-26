@@ -32,24 +32,24 @@ public:
 template <typename Derived>
 class IContextProvider {
 public:
-    size_t getProcessName([[maybe_unused]] char *buffer, [[maybe_unused]] size_t bufferSize) const {
+    size_t getProcessName(char *buffer, size_t bufferSize) const {
         return static_cast<const Derived *>(this)->getProcessNameImpl(buffer, bufferSize);
     }
 
-    size_t getThreadId([[maybe_unused]] char *buffer, [[maybe_unused]] size_t bufferSize) const {
+    size_t getThreadId(char *buffer, size_t bufferSize) const {
         return static_cast<const Derived *>(this)->getThreadIdImpl(buffer, bufferSize);
     }
 
-    size_t getCurrentDate([[maybe_unused]] char *buffer, [[maybe_unused]] size_t bufferSize) const {
+    size_t getCurrentDate(char *buffer, size_t bufferSize) const {
         return static_cast<const Derived *>(this)->getCurrentDateImpl(buffer, bufferSize);
     }
 
-    size_t getCurrentTime([[maybe_unused]] char *buffer, [[maybe_unused]] size_t bufferSize) const {
-        return static_cast<const Derived *>(this)->getCurrentTimeImpl(buffer, bufferSize);
+    size_t formatTime(char *buffer, size_t bufferSize, long timestamp) const {
+        return static_cast<const Derived *>(this)->formatTimeImpl(buffer, bufferSize, timestamp);
     }
 
     long long getTimestamp() const {
-        return static_cast<const Derived *>(this)->getTimeStampImpl();
+        return static_cast<const Derived *>(this)->getTimestampImpl();
     }
 };
 

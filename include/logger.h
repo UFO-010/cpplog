@@ -389,10 +389,10 @@ private:
 
     static void tokTimeHandler(size_t &pos,
                                char *outBuf,
-                               [[maybe_unused]] size_t bufSize,
-                               [[maybe_unused]] const TMessage &msg,
+                               size_t bufSize,
+                               const TMessage &msg,
                                const TContextProvider &data_provider_instance) {
-        pos += data_provider_instance.getCurrentTime(outBuf + pos, bufSize - pos);
+        pos += data_provider_instance.formatTime(outBuf + pos, bufSize - pos, msg.timestamp);
     }
 
     static void tokThreadHandler(size_t &pos,

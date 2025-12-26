@@ -45,7 +45,7 @@ struct LogMessage {
     std::array<char, TConfig::LOGGER_MAX_FORMAT_SIZE> user_data;
     size_t user_data_len;
 
-    long long timestamp;
+    long timestamp;
 };
 
 }  // namespace Log
