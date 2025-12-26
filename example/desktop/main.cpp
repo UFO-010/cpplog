@@ -1,10 +1,10 @@
 
 #include <thread>
 
-#include "../include/logger.h"
+#include "logger.h"
 #include "logger_config.h"
-#include "../include/console_sink.h"
-#include "../include/desktop_provider.h"
+#include "console_sink.h"
+#include "desktop_provider.h"
 
 using MyConfig = Log::Config::Traits<Log::Config::Default>;
 

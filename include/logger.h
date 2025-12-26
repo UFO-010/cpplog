@@ -56,6 +56,7 @@ class Logger {
 public:
     using TConfig = Log::Config::Traits<ConfigTag>;
     using CallbackType = std::function<void(const level, const char *, size_t)>;
+    using TMessage = LogMessage<TConfig>;
 
     explicit Logger(const TContextProvider &provider, TSinkTypes... sink_args) noexcept
         : data_provider_instance(provider),
@@ -165,14 +166,14 @@ public:
                Args &&...args) const {
         if constexpr (TConfig::FATAL_ENABLED) {
             if (logLevel > static_cast<int>(level::FatalMsg)) {
-                LogMessage<TConfig> msg{
-                    .record{level::FatalMsg, file, func, line},
-                    .user_data = {},
-                    .user_data_len = std::formatted_size(fmt, std::forward<Args>(args)...),
-                    .timestamp = data_provider_instance.getTimestamp()};
+                LogMessage<TConfig> msg{.record{level::FatalMsg, file, func, line},
+                                        .user_data = {},
+                                        .user_data_len = 0,
+                                        .timestamp = data_provider_instance.getTimestamp()};
 
-                std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
-                                 std::forward<Args>(args)...);
+                auto res = std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                                            std::forward<Args>(args)...);
+                msg.user_data_len = res.size;
                 log(msg);
             }
         }
@@ -186,14 +187,14 @@ public:
                Args &&...args) const {
         if constexpr (TConfig::FATAL_ENABLED) {
             if (logLevel > static_cast<int>(level::ErrorMsg)) {
-                LogMessage<TConfig> msg{
-                    .record{level::ErrorMsg, file, func, line},
-                    .user_data = {},
-                    .user_data_len = std::formatted_size(fmt, std::forward<Args>(args)...),
-                    .timestamp = data_provider_instance.getTimestamp()};
+                LogMessage<TConfig> msg{.record{level::ErrorMsg, file, func, line},
+                                        .user_data = {},
+                                        .user_data_len = 0,
+                                        .timestamp = data_provider_instance.getTimestamp()};
 
-                std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
-                                 std::forward<Args>(args)...);
+                auto res = std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                                            std::forward<Args>(args)...);
+                msg.user_data_len = res.size;
                 log(msg);
             }
         }
@@ -207,14 +208,14 @@ public:
                  Args &&...args) const {
         if constexpr (TConfig::FATAL_ENABLED) {
             if (logLevel > static_cast<int>(level::WarningMsg)) {
-                LogMessage<TConfig> msg{
-                    .record{level::WarningMsg, file, func, line},
-                    .user_data = {},
-                    .user_data_len = std::formatted_size(fmt, std::forward<Args>(args)...),
-                    .timestamp = data_provider_instance.getTimestamp()};
+                LogMessage<TConfig> msg{.record{level::WarningMsg, file, func, line},
+                                        .user_data = {},
+                                        .user_data_len = 0,
+                                        .timestamp = data_provider_instance.getTimestamp()};
 
-                std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
-                                 std::forward<Args>(args)...);
+                auto res = std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                                            std::forward<Args>(args)...);
+                msg.user_data_len = res.size;
                 log(msg);
             }
         }
@@ -228,35 +229,35 @@ public:
               Args &&...args) const {
         if constexpr (TConfig::FATAL_ENABLED) {
             if (logLevel > static_cast<int>(level::InfoMsg)) {
-                LogMessage<TConfig> msg{
-                    .record{level::InfoMsg, file, func, line},
-                    .user_data = {},
-                    .user_data_len = std::formatted_size(fmt, std::forward<Args>(args)...),
-                    .timestamp = data_provider_instance.getTimestamp()};
+                LogMessage<TConfig> msg{.record{level::InfoMsg, file, func, line},
+                                        .user_data = {},
+                                        .user_data_len = 0,
+                                        .timestamp = data_provider_instance.getTimestamp()};
 
-                std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
-                                 std::forward<Args>(args)...);
+                auto res = std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                                            std::forward<Args>(args)...);
+                msg.user_data_len = res.size;
                 log(msg);
             }
         }
     }
 
     template <typename... Args>
-    void debug(const std::format_string<Args...> fmt,
+    void debug(const std::format_string<Args...> &fmt,
                const std::string_view &file,
                const std::string_view &func,
                const size_t line,
                Args &&...args) const {
         if constexpr (TConfig::FATAL_ENABLED) {
             if (logLevel > static_cast<int>(level::DebugMsg)) {
-                LogMessage<TConfig> msg{
-                    .record{level::DebugMsg, file, func, line},
-                    .user_data = {},
-                    .user_data_len = std::formatted_size(fmt, std::forward<Args>(args)...),
-                    .timestamp = data_provider_instance.getTimestamp()};
+                LogMessage<TConfig> msg{.record{level::DebugMsg, file, func, line},
+                                        .user_data = {},
+                                        .user_data_len = 0,
+                                        .timestamp = data_provider_instance.getTimestamp()};
 
-                std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
-                                 std::forward<Args>(args)...);
+                auto res = std::format_to_n(msg.user_data.data(), msg.user_data.size(), fmt,
+                                            std::forward<Args>(args)...);
+                msg.user_data_len = res.size;
                 log(msg);
             }
         }
@@ -269,7 +270,7 @@ public:
      * Main logging function. Calls provided sinks and callbacks if enabled in
      * `logger_config.h`. All logging calls can be disabled in the same file.
      */
-    void log(const LogMessage<TConfig> &msg) const {
+    void log(const TMessage &msg) const {
         std::array<char, TConfig::LOGGER_MAX_STR_SIZE> finaL_msg;
         size_t msg_size = createMessage(finaL_msg.data(), msg);
 
@@ -284,7 +285,7 @@ public:
         }
     }
 
-    size_t createMessage(char *outBuf, const LogMessage<TConfig> &msg) const {
+    size_t createMessage(char *outBuf, const TMessage &msg) const {
         size_t pos = 0;
         size_t bufSize = TConfig::LOGGER_MAX_STR_SIZE;
 
@@ -292,44 +293,34 @@ public:
             append(pos, outBuf, bufSize, tokenOps[i].literal, tokenOps[i].literal_len);
             switch (tokenOps[i].type) {
                 case tokType::TokDate:
-                    tokDateHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
-                                   msg.user_data_len, data_provider_instance);
+                    tokDateHandler(pos, outBuf, bufSize, msg, data_provider_instance);
                     break;
                 case tokType::TokTime:
-                    tokTimeHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
-                                   msg.user_data_len, data_provider_instance);
+                    tokTimeHandler(pos, outBuf, bufSize, msg, data_provider_instance);
                     break;
                 case tokType::TokLevel:
-                    tokLevelHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
-                                    msg.user_data_len, data_provider_instance);
+                    tokLevelHandler(pos, outBuf, bufSize, msg, data_provider_instance);
                     break;
                 case tokType::TokFile:
-                    tokFileHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
-                                   msg.user_data_len, data_provider_instance);
+                    tokFileHandler(pos, outBuf, bufSize, msg, data_provider_instance);
                     break;
                 case tokType::TokThread:
-                    tokThreadHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
-                                     msg.user_data_len, data_provider_instance);
+                    tokThreadHandler(pos, outBuf, bufSize, msg, data_provider_instance);
                     break;
                 case tokType::TokFunc:
-                    tokFuncHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
-                                   msg.user_data_len, data_provider_instance);
+                    tokFuncHandler(pos, outBuf, bufSize, msg, data_provider_instance);
                     break;
                 case tokType::TokLine:
-                    tokLineHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
-                                   msg.user_data_len, data_provider_instance);
+                    tokLineHandler(pos, outBuf, bufSize, msg, data_provider_instance);
                     break;
                 case tokType::TokPid:
-                    tokPidHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
-                                  msg.user_data_len, data_provider_instance);
+                    tokPidHandler(pos, outBuf, bufSize, msg, data_provider_instance);
                     break;
                 case tokType::TokMessage:
-                    tokMessageHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
-                                      msg.user_data_len, data_provider_instance);
+                    tokMessageHandler(pos, outBuf, bufSize, msg, data_provider_instance);
                     break;
                 case tokType::TokInvalid:
-                    tokInvalidHandler(pos, outBuf, bufSize, msg.record, msg.user_data.data(),
-                                      msg.user_data_len, data_provider_instance);
+                    tokInvalidHandler(pos, outBuf, bufSize, msg, data_provider_instance);
                     break;
                 default:
                     break;
@@ -391,9 +382,7 @@ private:
     static void tokDateHandler(size_t &pos,
                                char *outBuf,
                                [[maybe_unused]] size_t bufSize,
-                               [[maybe_unused]] const LogRecord &record,
-                               [[maybe_unused]] const char *str,
-                               [[maybe_unused]] size_t str_len,
+                               [[maybe_unused]] const TMessage &msg,
                                const TContextProvider &data_provider_instance) {
         pos += data_provider_instance.getCurrentDate(outBuf + pos, bufSize - pos);
     }
@@ -401,9 +390,7 @@ private:
     static void tokTimeHandler(size_t &pos,
                                char *outBuf,
                                [[maybe_unused]] size_t bufSize,
-                               [[maybe_unused]] const LogRecord &record,
-                               [[maybe_unused]] const char *str,
-                               [[maybe_unused]] size_t str_len,
+                               [[maybe_unused]] const TMessage &msg,
                                const TContextProvider &data_provider_instance) {
         pos += data_provider_instance.getCurrentTime(outBuf + pos, bufSize - pos);
     }
@@ -411,9 +398,7 @@ private:
     static void tokThreadHandler(size_t &pos,
                                  char *outBuf,
                                  [[maybe_unused]] size_t bufSize,
-                                 [[maybe_unused]] const LogRecord &record,
-                                 [[maybe_unused]] const char *str,
-                                 [[maybe_unused]] size_t str_len,
+                                 [[maybe_unused]] const TMessage &msg,
                                  const TContextProvider &data_provider_instance) {
         pos += data_provider_instance.getThreadId(outBuf + pos, bufSize - pos);
     }
@@ -421,9 +406,7 @@ private:
     static void tokPidHandler(size_t &pos,
                               char *outBuf,
                               [[maybe_unused]] size_t bufSize,
-                              [[maybe_unused]] const LogRecord &record,
-                              [[maybe_unused]] const char *str,
-                              [[maybe_unused]] size_t str_len,
+                              [[maybe_unused]] const TMessage &msg,
                               const TContextProvider &data_provider_instance) {
         pos += data_provider_instance.getProcessName(outBuf + pos, bufSize - pos);
     }
@@ -431,12 +414,10 @@ private:
     static void tokLevelHandler(size_t &pos,
                                 char *outBuf,
                                 size_t bufSize,
-                                const LogRecord &record,
-                                [[maybe_unused]] const char *str,
-                                [[maybe_unused]] size_t str_len,
+                                const TMessage &msg,
                                 [[maybe_unused]] const TContextProvider &data_provider_instance) {
-        const char *ch = msg_log_types[static_cast<int>(record.msgType)].data();
-        size_t len = msg_log_types[static_cast<int>(record.msgType)].size();
+        const char *ch = msg_log_types[static_cast<int>(msg.record.msgType)].data();
+        size_t len = msg_log_types[static_cast<int>(msg.record.msgType)].size();
 
         append(pos, outBuf, bufSize, ch, len);
     }
@@ -444,51 +425,41 @@ private:
     static void tokFileHandler(size_t &pos,
                                char *outBuf,
                                size_t bufSize,
-                               const LogRecord &record,
-                               [[maybe_unused]] const char *str,
-                               [[maybe_unused]] size_t str_len,
+                               const TMessage &msg,
                                [[maybe_unused]] const TContextProvider &data_provider_instance) {
-        append(pos, outBuf, bufSize, record.file.data(), record.file.size());
+        append(pos, outBuf, bufSize, msg.record.file.data(), msg.record.file.size());
     }
 
     static void tokFuncHandler(size_t &pos,
                                char *outBuf,
                                size_t bufSize,
-                               const LogRecord &record,
-                               [[maybe_unused]] const char *str,
-                               [[maybe_unused]] size_t str_len,
+                               const TMessage &msg,
                                [[maybe_unused]] const TContextProvider &data_provider_instance) {
-        append(pos, outBuf, bufSize, record.func.data(), record.func.size());
+        append(pos, outBuf, bufSize, msg.record.func.data(), msg.record.func.size());
     }
 
     static void tokLineHandler(size_t &pos,
                                char *outBuf,
                                size_t bufSize,
-                               const LogRecord &record,
-                               [[maybe_unused]] const char *str,
-                               [[maybe_unused]] size_t str_len,
+                               const TMessage &msg,
                                [[maybe_unused]] const TContextProvider &data_provider_instance) {
         char *tail = outBuf + pos;
-        std::to_chars_result result = std::to_chars(tail, tail + (bufSize - pos), record.line);
+        std::to_chars_result result = std::to_chars(tail, tail + (bufSize - pos), msg.record.line);
         pos += result.ptr - tail;
     }
 
     static void tokMessageHandler(size_t &pos,
                                   char *outBuf,
                                   size_t bufSize,
-                                  [[maybe_unused]] const LogRecord &record,
-                                  const char *str,
-                                  size_t str_len,
+                                  const TMessage &msg,
                                   [[maybe_unused]] const TContextProvider &data_provider_instance) {
-        append(pos, outBuf, bufSize, str, str_len);
+        append(pos, outBuf, bufSize, msg.user_data.data(), msg.user_data_len);
     }
 
     static void tokInvalidHandler([[maybe_unused]] size_t &pos,
                                   [[maybe_unused]] char *outBuf,
                                   [[maybe_unused]] size_t bufSize,
-                                  [[maybe_unused]] const LogRecord &record,
-                                  [[maybe_unused]] const char *str,
-                                  [[maybe_unused]] size_t str_len,
+                                  [[maybe_unused]] const TMessage &msg,
                                   [[maybe_unused]] const TContextProvider &data_provider_instance) {
         append(pos, outBuf, bufSize, "invalid token", sizeof("invalid token"));
     }
