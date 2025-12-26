@@ -1,35 +1,56 @@
 
-#ifndef DEFAULTPROVIDER_H
-#define DEFAULTPROVIDER_H
+#pragma once
 
 #include <cstddef>
 
-class DefaultDataProvider {
+#include "message.h"
+
+namespace Log {
+
+/**
+ * @brief The IMessageQueue class
+ *
+ * Class that store data captured in hot path and should be processed in background
+ */
+template <typename Derived, typename TConfig = Config::Traits<Config::Default>>
+class IMessageQueue {
+    using ConfigType = TConfig;
+    using MessageType = LogMessage<TConfig>;
+
 public:
-    virtual ~DefaultDataProvider() = default;
+    ~IMessageQueue() = default;
 
-    virtual size_t getProcessName([[maybe_unused]] char *buffer,
-                                  [[maybe_unused]] size_t bufferSize) const {
-        return 0;
-    }
+    bool enqueue(const MessageType &msg) { return static_cast<Derived *>(this)->enqueueImpl(msg); }
 
-    virtual size_t getThreadId([[maybe_unused]] char *buffer,
-                               [[maybe_unused]] size_t bufferSize) const {
-        return 0;
-    }
+    bool dequeue(MessageType &msg) { return static_cast<Derived *>(this)->dequeueImpl(msg); }
 
-    virtual size_t getCurrentDate([[maybe_unused]] char *buffer,
-                                  [[maybe_unused]] size_t bufferSize) const {
-        return 0;
-    }
-
-    virtual size_t getCurrentTime([[maybe_unused]] char *buffer,
-                                  [[maybe_unused]] size_t bufferSize) const {
-        return 0;
+    bool dequeueBlocking(MessageType &msg, unsigned long timeout_ms = 0) {
+        return static_cast<Derived *>(this)->dequeueBlockingImpl(msg, timeout_ms);
     }
 };
 
-template <typename PlatformTag>
-class PlatformDataProvider : public DefaultDataProvider {};
+template <typename Derived>
+class IContextProvider {
+public:
+    size_t getProcessName(char *buffer, size_t bufferSize) const {
+        return static_cast<const Derived *>(this)->getProcessNameImpl(buffer, bufferSize);
+    }
 
-#endif
+    size_t getThreadId(char *buffer, size_t bufferSize) const {
+        return static_cast<const Derived *>(this)->getThreadIdImpl(buffer, bufferSize);
+    }
+
+    size_t getCurrentDate(char *buffer, size_t bufferSize) const {
+        return static_cast<const Derived *>(this)->getCurrentDateImpl(buffer, bufferSize);
+    }
+
+    size_t formatTime(char *buffer, size_t bufferSize, long timestamp) const {
+        return static_cast<const Derived *>(this)->formatTimeImpl(buffer, bufferSize, timestamp);
+    }
+
+    long long getTimestamp() const {
+        return static_cast<const Derived *>(this)->getTimestampImpl();
+    }
+};
+
+}  // namespace Log

@@ -20,14 +20,17 @@
 
 #include "default_provider.h"
 
-struct Desktop {};
-
-template <>
-class PlatformDataProvider<Desktop> : public DefaultDataProvider {
+class DesktopContext : public Log::IContextProvider<DesktopContext> {
 public:
-    PlatformDataProvider() { getCurrentProcessName(); }
+    DesktopContext() { getCurrentProcessName(); }
 
-    size_t getProcessName(char *buffer, size_t bufferSize) const final {
+    long long getTimestampImpl() const {
+        time_t timestamp = 0;
+        time(&timestamp);
+        return timestamp;
+    }
+
+    size_t getProcessNameImpl(char *buffer, size_t bufferSize) const {
         size_t size = current_process.size();
         if (size >= bufferSize) {
             return 0;
@@ -36,7 +39,7 @@ public:
         return size;
     }
 
-    size_t getThreadId(char *buffer, size_t bufferSize) const final {
+    size_t getThreadIdImpl(char *buffer, size_t bufferSize) const {
 #if defined(__linux__)
         auto tid = static_cast<pid_t>(syscall(SYS_gettid));
         int len = std::snprintf(buffer, bufferSize, "%d", tid);
@@ -52,7 +55,7 @@ public:
 #endif
     }
 
-    size_t getCurrentDate(char *buffer, size_t bufferSize) const final {
+    size_t getCurrentDateImpl(char *buffer, size_t bufferSize) const {
         time_t timestamp = 0;
         time(&timestamp);
         struct tm datetime = {};
@@ -64,9 +67,7 @@ public:
         return 0;
     }
 
-    size_t getCurrentTime(char *buffer, size_t bufferSize) const final {
-        time_t timestamp = 0;
-        time(&timestamp);
+    size_t formatTimeImpl(char *buffer, size_t bufferSize, const long timestamp) const {
         struct tm datetime = {};
 
         if (localtime_r(&timestamp, &datetime) != nullptr) {

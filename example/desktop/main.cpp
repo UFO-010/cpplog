@@ -1,30 +1,30 @@
 
 #include <thread>
 
-#include "../include/logger.h"
+#include "logger.h"
 #include "logger_config.h"
-#include "../include/console_sink.h"
-#include "../include/desktop_provider.h"
+#include "console_sink.h"
+#include "desktop_provider.h"
 
 using MyConfig = Log::Config::Traits<Log::Config::Default>;
 
-void thread_func1(Log::Logger<MyConfig, PlatformDataProvider<Desktop>, ConsoleSink> const &log) {
+void thread_func1(Log::Logger<DesktopContext, MyConfig, ConsoleSink> const &log) {
     for (int i = 0; i < 1000; i++) {
-        Warning(log, "thread 1\n", sizeof("thread 1\n"));  // simple log
-        Fatal(log, "thread 1\n", sizeof("thread 1\n"));    // simple log
+        Warning(log, "thread {:d}\n", 1);  // simple log
+        Fatal(log, "thread {:d}\n", 1);    // simple log
     }
 }
 
-void thread_func2(Log::Logger<MyConfig, PlatformDataProvider<Desktop>, ConsoleSink> const &log) {
+void thread_func2(Log::Logger<DesktopContext, MyConfig, ConsoleSink> const &log) {
     for (int i = 0; i < 1000; i++) {
-        Info(log, "thread 2\n", sizeof("thread 2\n"));   // simple log
-        Error(log, "thread 2\n", sizeof("thread 2\n"));  // simple log
+        Info(log, "thread {:d}\n", 2);   // simple log
+        Error(log, "thread {:d}\n", 2);  // simple log
     }
 }
 
 int main() {
-    const PlatformDataProvider<Desktop> defaultDataProvider;  // example simple data provider
-    const ConsoleSink consoleSink;  // example sink that prints data to console
+    const DesktopContext defaultDataProvider;  // example simple data provider
+    const ConsoleSink consoleSink;             // example sink that prints data to console
     Log::Logger myLogger(defaultDataProvider, consoleSink);
 
     consoleSink.colorize(true);
